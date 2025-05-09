@@ -1,0 +1,2712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindSimulator - Chat with Psychos & Top Trumps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Reset and General Styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            border: none;
+            user-select: none; /* Prevent text selection */
+            overflow: auto !important; /* Ensure scrollbars appear if needed */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            transition: background-image 0.3s ease;
+            font-family: 'Inter', sans-serif; /* Using Inter font */
+            background-color: #0f172a; /* Darker Slate background (slate-900) */
+            color: #e2e8f0; /* Default text color (slate-200) */
+        }
+        * {
+            box-sizing: border-box;
+        }
+
+        /* --- Intro Screen Styles --- */
+        #intro-screen {
+            position: fixed; /* Fixed to cover the entire viewport */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* background-image will be set by JS using IMAGE_BASE_URL */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex; /* Use flexbox to center content */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            z-index: 9999; /* Ensure it's on top of everything */
+            cursor: pointer; /* Indicate it's clickable */
+            transition: opacity 0.5s ease; /* Smooth transition when hiding */
+            /* Add a semi-transparent overlay if needed */
+            /* background-color: rgba(0, 0, 0, 0.5); */
+        }
+
+        /* Optional: Style for text/content on the intro screen if any */
+        #intro-screen-content {
+            text-align: center;
+            color: white; /* Adjust text color for visibility */
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background for text */
+            border-radius: 10px;
+        }
+
+        /* Style for the main content container, initially hidden */
+        #main-content {
+            display: none; /* Hide main content initially */
+            /* You might need to adjust positioning/layout here */
+            width: 100%;
+            height: 100%;
+            position: relative; /* Or absolute, depending on layout needs */
+        }
+
+.fart-toggle-icon {
+  display: none !important;
+}
+
+
+        /* Class to show the main content */
+        .show-main-content #main-content {
+            display: block; /* Show main content */
+        }
+
+        /* --- Top Trumps Game Area Styles --- */
+        #top-trumps-game-area {
+            position: absolute;
+            width: 90%;
+            max-width: 600px;
+            min-width: 320px;
+            color: #e2e8f0;
+            z-index: 1000;
+            resize: both;
+            overflow: hidden;
+            /* display: none; Removed, controlled by #main-content */
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.5); /* slate-900 with 50% opacity */
+            border: 1px solid #334155; /* slate-700 */
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex; /* Keep flex for internal layout */
+            min-height: 150px;
+        }
+        #top-trumps-game-area .game-content-wrapper {
+             padding: 0.5rem;
+             text-align: center;
+             flex-grow: 1;
+             overflow-y: auto;
+             max-height: 400px;
+             scrollbar-width: thin;
+             scrollbar-color: #64748b #334155;
+             cursor: default;
+         }
+        #top-trumps-game-area .game-content-wrapper::-webkit-scrollbar { width: 8px; }
+        #top-trumps-game-area .game-content-wrapper::-webkit-scrollbar-track { background: #334155; border-radius: 4px; }
+        #top-trumps-game-area .game-content-wrapper::-webkit-scrollbar-thumb { background-color: #64748b; border-radius: 4px; border: 2px solid #334155; }
+
+        /* --- MODIFICATION: Added style for left icon container in TT header --- */
+        #top-trumps-game-area .window-header .icon-container-left {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            padding-top: 0.125rem; /* Align with right icons */
+            flex-shrink: 0;
+        }
+        #top-trumps-game-area .window-header .icon-container-left i {
+            cursor: pointer;
+            transition: color 0.2s ease-in-out, transform 0.1s ease;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        #top-trumps-game-area .window-header .icon-container-left i:hover {
+            color: #e2e8f0;
+        }
+        #top-trumps-game-area .window-header .icon-container-left i:active {
+             transform: scale(0.9);
+         }
+        #top-trumps-game-area .window-header .speaker-icon.active {
+            color: #5eead4; /* Teal color when active */
+        }
+        /* --- End MODIFICATION --- */
+
+        /* Top Trumps Header Title Block - Centered */
+        #top-trumps-game-area .window-header .title-block {
+             text-align: center; /* Center the text */
+             flex-grow: 1; /* Allow it to take available space */
+             margin: 0 0.5rem; /* Add some margin to separate from icons */
+             padding-left: 1rem; /* Reduced padding as icon is now separate */
+             padding-right: 1rem;
+         }
+        /* Top Trumps Header Title Text */
+        #top-trumps-game-area .window-header h3 {
+             margin: 0;
+             /* --- MODIFICATION: Increased font size --- */
+             font-size: 1.3rem; /* Increased size */
+             /* --- End MODIFICATION --- */
+             font-weight: 700;
+             color: #f8fafc;
+             padding-top: 0.125rem;
+             display: inline-block; /* Keep inline-block for centering */
+             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+             color: #f87171; /* Red color (red-400) */
+             animation: bounceSlow 2s infinite ease-in-out; /* Apply bounce animation */
+         }
+        #top-trumps-game-area p {
+             margin-bottom: 0.5rem;
+             font-size: 0.9rem;
+         }
+        #top-trumps-game-area .card-display {
+             display: flex;
+             justify-content: space-around;
+             margin-bottom: 1rem;
+             font-size: 0.85rem;
+             gap: 1rem;
+             flex-wrap: wrap;
+         }
+         #top-trumps-game-area .card-display > div {
+             flex: 1;
+             min-width: 120px;
+             padding: 0.5rem;
+             border: 1px solid #334155;
+             border-radius: 0.25rem;
+             background: rgba(30, 41, 59, 0.5);
+             text-align: center; /* Center align content within card divs */
+         }
+         /* Card Titles (Card Name / AI Card) */
+         #top-trumps-game-area .card-display strong {
+             font-weight: 600;
+             font-size: 0.95rem;
+             /* Default color removed, will be set inline */
+             display: block;
+             margin-bottom: 0.3rem;
+             border-bottom: 1px solid #475569;
+             padding-bottom: 0.2rem;
+             text-align: center; /* Ensure title is centered */
+         }
+         #top-trumps-game-area .card-display ul {
+             list-style: none;
+             padding: 0;
+             margin: 0.25rem 0 0 0;
+             text-align: center; /* Center align list items */
+         }
+         #top-trumps-game-area .card-display li {
+             margin-bottom: 0.1rem;
+             line-height: 1.3;
+             color: #e2e8f0; /* Ensure list items have default text color */
+             /* List items will inherit text-align: center from ul */
+         }
+        #top-trumps-game-area .categories {
+             margin-top: 1rem;
+             display: flex;
+             flex-wrap: wrap; /* Allow buttons to wrap */
+             justify-content: center; /* Center buttons horizontally */
+             gap: 0.5rem; /* Add gap between buttons */
+         }
+        #top-trumps-game-area .categories button {
+             background-color: #334155;
+             color: #cbd5e1;
+             padding: 0.4rem 0.8rem;
+             font-size: 0.8rem;
+             border: 1px solid #475569;
+             border-radius: 0.375rem;
+             cursor: pointer;
+             transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+             flex-basis: calc(33.333% - 0.5rem); /* Aim for 3 buttons per row, adjust gap */
+             max-width: calc(33.333% - 0.5rem);
+             text-align: center;
+         }
+        #top-trumps-game-area .categories button:hover {
+             background-color: #475569;
+             border-color: #64748b;
+             color: #f1f5f9;
+         }
+         #top-trumps-game-area .categories button:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+          }
+        #top-trumps-score-area {
+             font-size: 0.9rem;
+             font-weight: 600; /* Make score slightly bolder */
+             color: #cbd5e1; /* Default color (slate-300) */
+             margin-top: 0.75rem;
+             padding: 0.5rem;
+             background: rgba(30, 41, 59, 0.3);
+             border-radius: 0.375rem;
+             border: 1px solid #475569;
+             transition: color 0.3s ease; /* Smooth color transition */
+         }
+         .player-score {
+             color: #4ade80; /* Green-400 */
+             font-weight: bold;
+         }
+         .ai-score {
+             color: #f87171; /* Red-400 */
+             font-weight: bold;
+         }
+
+        /* --- Pulse Animation for Win Message --- */
+        @keyframes pulseOnce {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-win-message {
+            animation: pulseOnce 0.7s ease-in-out 1; /* Play animation once */
+        }
+
+        /* --- Bounce Animation for Title --- */
+        @keyframes bounceSlow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); } /* Adjust bounce height as needed */
+        }
+        /* --- End Bounce Animation --- */
+
+
+        /* --- Button Container Styles --- */
+        .button-container {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.25rem;
+            z-index: 1001;
+            width: 100%;
+            max-width: 1200px;
+            padding: 0.5rem 1rem;
+        }
+        .button-container button {
+            background-color: rgba(30, 41, 59, 0.6); /* slate-800 with 60% opacity */
+            color: #cbd5e1;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid #475569;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.1s ease;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+            margin: 0.125rem;
+             animation: pulseSlowButton 3s infinite ease-in-out;
+        }
+        .button-container button:hover {
+            background-color: rgba(51, 65, 85, 0.6); /* slate-700 with 60% opacity */
+            border-color: #64748b;
+            color: #f1f5f9;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.15);
+             animation: none;
+        }
+        .button-container button:focus-visible {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: #9ca3af;
+            box-shadow: 0 0 0 3px rgba(209, 213, 219, 0.3);
+            background-color: rgba(51, 65, 85, 0.6); /* slate-700 with 60% opacity */
+             animation: none;
+        }
+         .button-container button:active {
+             transform: translateY(0px);
+             background-color: rgba(71, 85, 105, 0.6); /* slate-600 with 60% opacity */
+             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+              animation: none;
+         }
+         .button-container button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+             transform: none;
+             box-shadow: none;
+             background-color: rgba(51, 65, 85, 0.6); /* slate-700 with 60% opacity */
+             border-color: #475569;
+             color: #64748b;
+             animation: none;
+         }
+
+        /* Specific style for the Top Trumps button font color */
+        #top-trumps-btn {
+            color: #f87171; /* Red color (red-400) */
+        }
+
+
+        /* Removed Signature Styles */
+        /*
+        .signature {
+            position: fixed;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            color: #64748b;
+            font-size: 0.75rem;
+            opacity: 0.8;
+            z-index: 1001;
+        }
+        */
+
+        /* --- Draggable Window Styles (Chat & Info) --- */
+        .draggable {
+            position: absolute;
+            background: rgba(10, 10, 20, 0.7);
+            border: 1px solid #27272a;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: #e2e8f0;
+            min-width: 320px;
+            max-width: 500px;
+            max-height: 600px; /* Added max-height */
+            resize: both;
+            overflow: hidden;
+            z-index: 1000;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+            transition: border-color 0.2s ease-in-out;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* --- Window Header Styles (Shared by Chat, Info & Top Trumps) --- */
+        .window-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Align items at the start (top) */
+            padding: 0.5rem 0.5rem 0.75rem 0.5rem;
+            cursor: move;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 0.5rem;
+            flex-shrink: 0;
+        }
+        .window-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin: 0;
+            padding-top: 0.125rem;
+        }
+        .window-subtitle {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin: 0.125rem 0 0 0;
+        }
+        .title-block {
+            text-align: left; /* Default alignment for chat/info */
+            flex-grow: 1;
+            margin-right: 0.75rem;
+        }
+        .icon-container-right {
+             display: flex;
+             gap: 0.75rem;
+             align-items: center;
+             padding-top: 0.125rem; /* Align with title baseline */
+             flex-shrink: 0;
+         }
+        .window-header .icon-container-right i {
+            cursor: pointer;
+            transition: color 0.2s ease-in-out, transform 0.1s ease;
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        .window-header .icon-container-right i:hover {
+            color: #e2e8f0;
+        }
+         .window-header .icon-container-right i:active {
+             transform: scale(0.9);
+         }
+
+        /* --- Chat Window Specific Styles --- */
+        .chat-window .chat-window-content {
+            height: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 0.375rem;
+            flex-grow: 1;
+            box-sizing: border-box;
+            order: 2;
+            scrollbar-width: thin;
+            scrollbar-color: #64748b #334155;
+            cursor: default;
+        }
+        .chat-window-content::-webkit-scrollbar { width: 8px; }
+        .chat-window-content::-webkit-scrollbar-track { background: #334155; border-radius: 4px; }
+        .chat-window-content::-webkit-scrollbar-thumb { background-color: #64748b; border-radius: 4px; border: 2px solid #334155; }
+        .chat-window-content p { margin: 0.5rem 0; word-wrap: break-word; line-height: 1.5; color: #e2e8f0; }
+        .chat-window-content p strong { margin-right: 0.375rem; font-weight: 600; }
+        .chat-window-content p:not(.user-message):not(.opponent-text):not(.system-text):not(.error-text) strong { color: #5eead4; }
+        .chat-window-content p.user-message strong { color: #93c5fd; }
+        .chat-window-content p.user-message { color: #f1f5f9; }
+        .chat-window-content p.user-message.mic-input-message { color: #93c5fd; }
+        .opponent-text strong { color: #fda4af !important; }
+        .opponent-text { color: #f1f5f9; }
+        .chat-window-content p strong.speaking { animation: namePulse 1s infinite ease-in-out; }
+        @keyframes namePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.05); } }
+
+        .input-container { display: flex; gap: 0.5rem; order: 3; margin-top: 0.5rem; align-items: center; }
+        .user-input {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #475569;
+            border-radius: 0.375rem;
+            background: #1e293b;
+            color: #e2e8f0;
+            outline: none;
+            transition: border-color 0.2s ease-in-out, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease-in-out;
+        }
+        .user-input:focus {
+            border-color: #60a5fa;
+            background-color: #334155;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .input-container.listening-active .user-input {
+             color: #93c5fd;
+         }
+
+        /* --- Professional Button Styles (Send/Mic) */
+        .send-btn, .mic-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #475569;
+            color: #cbd5e1;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+            font-size: 0.875rem;
+            line-height: 1;
+            height: 38px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .send-btn { background-color: #334155; }
+        .send-btn:hover { background-color: #475569; border-color: #64748b; color: #f1f5f9; }
+
+        .mic-btn { background-color: #2563eb; border-color: #1d4ed8; color: #eff6ff; }
+        .mic-btn:hover { background-color: #1d4ed8; border-color: #1e40af; }
+
+        .mic-btn.listening {
+            background-color: #dc2626;
+            border-color: #b91c1c;
+            color: #fef2f2;
+            animation: pulseMic 1.5s infinite;
+        }
+        .mic-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #334155;
+            border-color: #475569;
+            color: #64748b;
+        }
+        @keyframes pulseMic {
+             0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+             70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+             100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+         }
+
+        /* Left Icon Container (Chat Window) */
+        .chat-window .icon-container-left { display: flex; gap: 0.75rem; align-items: center; order: 1; margin-bottom: 0.75rem; padding-left: 0.25rem; }
+        .chat-window .icon-container-left i {
+            cursor: pointer;
+            transition: color 0.2s ease-in-out, transform 0.1s ease, box-shadow 0.2s ease;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            padding: 0.25rem;
+            border-radius: 50%;
+        }
+        .chat-window .icon-container-left i:hover {
+            color: #e2e8f0;
+            background-color: rgba(100, 116, 139, 0.2);
+        }
+        .chat-window .icon-container-left i:active { transform: scale(0.9); }
+        .chat-window .speaker-icon.active { color: #5eead4; }
+
+        /* Added style for fart toggle icon */
+        .chat-window .fart-toggle-icon.active {
+            color: #f87171; /* Red when active (fart mode enabled) */
+        }
+        /* Optional: Style when disabled (fart mode off) */
+        .chat-window .fart-toggle-icon:not(.active) {
+             color: #64748b; /* Gray when inactive */
+        }
+
+
+        @keyframes pulseIcon { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+        /* Argue Button States */
+        .argue-btn.argue-selected {
+            color: #34d399 !important;
+            animation: none;
+            background-color: rgba(52, 211, 153, 0.15);
+            box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+            transform: scale(1.1);
+        }
+        .argue-btn.argue-active {
+            color: #fb7185 !important;
+            animation: pulseIcon 1.5s infinite;
+            background-color: rgba(251, 113, 133, 0.15);
+            box-shadow: none;
+            transform: scale(1);
+        }
+
+        /* --- Info Window Specific Styles --- */
+        .info-window .info-window-content {
+            height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 0.375rem;
+            flex-grow: 1;
+            box-sizing: border-box;
+            line-height: 1.6;
+            text-align: left;
+            scrollbar-width: thin;
+            scrollbar-color: #64748b #334155;
+            color: #cbd5e1;
+            font-size: 0.875rem;
+            word-wrap: break-word;
+        }
+        .info-window-content::-webkit-scrollbar { width: 8px; }
+        .info-window-content::-webkit-scrollbar-track { background: #334155; border-radius: 4px; }
+        .info-window-content::-webkit-scrollbar-thumb { background-color: #64748b; border-radius: 4px; border: 2px solid #334155; }
+        .info-window-content.loading {
+            display: flex;
+            justify-content: center; align-items: center;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        /* Text message styling (Shared) */
+        .system-text { color: #94a3b8; font-style: italic; font-size: 0.75rem; }
+        .error-text { color: #fca5a5; font-weight: 500; font-size: 0.75rem; }
+        .listening-text { color: #fcd34d; font-style: italic; font-size: 0.75rem; }
+
+        /* Feedback message style (Shared) */
+        .feedback-message {
+            position: fixed;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: #f1f5f9;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            z-index: 9999;
+            text-align: center; white-space: pre-wrap;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            border: 1px solid #334155;
+        }
+
+        /* Minimized window style (Only for Chat Windows) */
+        .draggable.minimized {
+            height: 48px !important;
+            min-height: 48px !important;
+            overflow: hidden !important; resize: none !important;
+            background: rgba(10, 10, 20, 0.7) !important;
+             backdrop-filter: blur(8px) !important;
+             -webkit-backdrop-filter: blur(8px) !important;
+         }
+        .minimized .chat-window-content, .minimized .input-container, .minimized .icon-container-left { display: none; }
+        .minimized .window-header { border-bottom: none; }
+        /* Ensure info windows don't fully collapse */
+        .info-window.minimized { height: auto !important; min-height: auto !important; resize: both !important; }
+        .info-window.minimized .info-window-content { display: block; }
+
+        /* --- Command Window Styles --- */
+        #command-window {
+            position: fixed; /* Keep as fixed for floating behavior */
+            bottom: 60px; /* Position above the toggle button */
+            right: 20px;
+            width: 90%; /* Responsive width */
+            max-width: 400px; /* Max width for larger screens */
+            height: 250px;
+            /* Updated background for 50% transparency */
+            background: rgba(0, 0, 0, 0.5); /* Black background with 50% opacity */
+            /* Removed border */
+            border: none;
+            border-radius: 8px;
+            /* Changed text color to white */
+            color: #ffffff;
+            /* Ensure monospace font for terminal feel */
+            font-family: 'Courier New', Courier, monospace;
+            display: none; /* Hidden by default */
+            z-index: 1002; /* Above other windows */
+            padding: 1rem;
+            overflow-y: auto; /* Enable scrolling for output */
+            box-sizing: border-box; /* Include padding in width/height */
+            display: flex; /* Use flexbox for layout */
+            flex-direction: column; /* Stack output and input vertically */
+            /* Make the window focusable to capture keypresses */
+            outline: none;
+            resize: both; /* Make the command window resizable */
+        }
+
+        #command-output {
+            flex-grow: 1; /* Output area takes available space */
+            overflow-y: auto; /* Enable scrolling for output */
+            margin-bottom: 0; /* Remove margin below output */
+            /* Ensure monospace font for output */
+            font-family: 'Courier New', Courier, monospace;
+             /* Custom scrollbar styles */
+            scrollbar-width: thin;
+            scrollbar-color: #00ff00 #000;
+            /* Allow text wrapping */
+            white-space: pre-wrap;
+            word-break: break-all;
+            /* Adjusted font size */
+            font-size: 0.85rem; /* Smaller font size */
+        }
+
+        #command-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #command-output::-webkit-scrollbar-track {
+            background: #000;
+            border-radius: 4px;
+        }
+
+        #command-output::-webkit-scrollbar-thumb {
+            background-color: #00ff00;
+            border-radius: 4px;
+            border: 2px solid #000;
+        }
+
+        /* Removed #command-input styles as the input box is removed */
+
+        /* Style for the hidden toggle area */
+        #terminal-toggle-area {
+             position: fixed;
+             bottom: 1rem;
+             right: 1rem;
+             width: 40px; /* Adjust size as needed to match the old icon size */
+             height: 40px; /* Adjust size as needed */
+             cursor: pointer;
+             z-index: 1003; /* Above command window */
+             /* Make it invisible */
+             background-color: transparent;
+             border: none;
+        }
+
+
+        /* Removed terminal-toggle styles as the icon is removed */
+        /*
+        #terminal-toggle {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            font-size: 1.4rem;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00ffcc;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            z-index: 1003;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        #terminal-toggle:hover {
+            background-color: rgba(0, 255, 204, 0.2);
+            border-color: #00ffff;
+            color: #00ffff;
+        }
+        */
+        /* --- End Command Window Styles --- */
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #top-trumps-game-area {
+                width: 95%;
+                max-width: none;
+                left: 2.5% !important;
+                padding: 0.75rem;
+                 min-height: 100px;
+            }
+            #top-trumps-game-area .categories button {
+                 flex-basis: calc(50% - 0.5rem); /* Aim for 2 buttons per row on small screens */
+                 max-width: calc(50% - 0.5rem);
+             }
+             .button-container {
+                 top: 0.5rem;
+                 gap: 0.25rem;
+                 padding: 0.25rem 0.5rem;
+                 background-color: transparent;
+                 border-radius: 0;
+                 box-shadow: none;
+             }
+             .button-container button { padding: 0.4rem 0.6rem; font-size: 0.75rem; margin: 0.1rem; }
+             .draggable {
+                 width: 95%; max-width: none; left: 2.5% !important;
+                 max-height: 75vh; min-width: 0;
+             }
+             .chat-window .chat-window-content { height: 180px; max-height: 250px; padding: 0.5rem; }
+             .info-window .info-window-content { height: 200px; font-size: 0.8125rem; line-height: 1.5; padding: 0.75rem; }
+             /* --- MODIFICATION: Adjust TT title size for mobile --- */
+             .window-title, #top-trumps-game-area .window-header h3 { font-size: 1.1rem; } /* Slightly smaller on mobile */
+             /* --- End MODIFICATION --- */
+             .window-subtitle { font-size: 0.7rem; }
+             /* --- MODIFICATION: Adjust TT icon size for mobile --- */
+             .icon-container-left i, .window-header .icon-container-right i,
+             #top-trumps-game-area .window-header .icon-container-left i { font-size: 0.8125rem; }
+             /* --- End MODIFICATION --- */
+             .user-input { padding: 0.4rem 0.6rem; }
+             .send-btn, .mic-btn { padding: 0.4rem 0.6rem; font-size: 0.8125rem; height: 34px; }
+             /* Removed Signature Styles for mobile */
+             /* .signature { font-size: 0.625rem; bottom: 0.5rem; right: 0.5rem; } */
+
+             /* Command window responsive adjustments */
+             #command-window {
+                 width: 95%;
+                 right: 2.5%;
+                 bottom: 50px; /* Adjust position for mobile toggle */
+                 max-width: none;
+             }
+             /* Adjust hidden toggle area size for mobile */
+             #terminal-toggle-area {
+                 bottom: 0.5rem;
+                 right: 0.5rem;
+                 width: 30px; /* Smaller touch target */
+                 height: 30px;
+             }
+         }
+     </style>
+ </head>
+ <body>
+
+     <div id="intro-screen">
+         </div>
+
+     <div id="main-content">
+
+         <div id="top-trumps-game-area" style="display: none;">
+             <div class="window-header" id="top-trumps-header">
+                 <div class="icon-container-left">
+                     <i class="fas fa-volume-up speaker-icon" id="top-trumps-speaker-icon" title="Toggle Sound Effects (On)"></i>
+                 </div>
+                 <div class="title-block">
+                     <h3 class="window-title">Top Trumps</h3>
+                 </div>
+                 <div class="icon-container-right">
+                     <i class="fas fa-times close-btn" id="top-trumps-close-btn" title="Close Top Trumps"></i>
+                 </div>
+             </div>
+             <div class="game-content-wrapper">
+                 <div class="card-display">
+                     <div id="user-card-area">(Card Name)</div>
+                     <div id="game-info-area">Info</div>
+                     <div id="ai-card-area">AI Cards: (Count)</div>
+                 </div>
+                 <div id="top-trumps-score-area">Score: You 0 - AI 0</div>
+                 <div id="category-buttons-area" class="categories">
+                     {/* Category buttons will be added here by JS */}
+                 </div>
+                 <p id="game-status-message"></p>
+             </div>
+         </div>
+
+         <div class="button-container">
+             <button id="huntley-btn">Ian Huntley & Maxine Carr</button>
+             <button id="ripper-btn">Yorkshire Ripper</button>
+             <button id="shannon-btn">Karen Matthews</button>
+             <button id="west-btn">Fred & Rose West</button>
+             <button id="bundy-btn">Ted Bundy</button>
+             <button id="gracy-btn">John Wayne Gacy</button>
+             <button id="zodiac-btn">Zodiac Killer</button>
+             <button id="andrew-btn">Prince Andrew</button>
+             <button id="p-diddy-btn">P Diddy / Puff Daddy</button>
+             <button id="fritzl-btn">Josef Fritzl</button>
+             <button id="moors-btn">Moors Murderers</button>
+             <button id="shipman-btn">Harold Shipman</button>
+             <button id="savile-btn">Jimmy Savile</button>
+             <button id="glitter-btn">Gary Glitter</button>
+             <button id="dahmer-btn">Jeffrey Dahmer</button>
+             <button id="dennis-btn">Des Nilsen</button>
+             <button id="lucy-btn">Lucy Letby</button>
+             <button id="epstein-btn">Jeffrey Epstein</button>
+             <button id="adolf-btn">Adolf Hitler</button>
+             <button id="stalker-btn">Yorkshire Stalker</button>
+             <button id="dando-btn">Jill Dando</button>
+             </div>
+
+         <div id="command-window" tabindex="0"> <div id="command-output"></div> </div>
+
+         <div id="terminal-toggle-area" title="Open Command Console"></div>
+
+     </div> <script>
+         // --- Constants ---
+         const API_BASE_URL = 'https://huntley.onrender.com/api';
+         const IMAGE_BASE_URL = 'https://huntley.onrender.com/files';
+
+         // --- Voice IDs (REMOVED as backend handles voice selection/description) ---
+
+         // --- Timings and Limits ---
+         const INACTIVITY_TIMEOUT = 600000;
+         const TOUCH_THROTTLE_MS = 50; const MAX_ARGUE_TURNS = 31; const TYPING_SPEED = 30; const SILENCE_TIMER_MS = 1200; const RESTART_DELAY_MS = 500;
+         const CONSECUTIVE_CLICK_TIME_WINDOW = 500;
+
+         // --- Application State ---
+         let windows = {}; // Stores data for each chat window
+         let infoWindows = {}; // Stores data for each info window
+         let highestZIndex = 1000; // For managing window stacking order
+         let isArguing = false; // Flag for argument mode
+         let argumentParticipants = []; // Array of personality IDs in an argument
+         let argueTurns = 0; // Counter for argument turns
+         let globalIsAudioPlaying = false; // Flag for any audio playing globally
+         let isTTSPlaying = false; // Flag for TTS audio specifically
+         let currentSpeaker = null; // ID of the personality currently speaking
+         let currentAudio = null; // Current Audio object for playback
+         let selectedForArgument = []; // Array of personality IDs selected for argument
+         const MOODS = ['neutral', 'irritable', 'paranoid', 'defensive', 'agitated', 'calm']; // Possible moods
+
+         // --- Speech Recognition Setup ---
+         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+         const supportsSpeechRecognition = !!SpeechRecognition;
+         console.log(`SR Supported: ${supportsSpeechRecognition}`);
+
+         // --- User Identification ---
+         const userId = localStorage.getItem('userId') || generateUUID();
+         localStorage.setItem('userId', userId);
+
+         // --- Personality Configuration (Frontend View) - Removed 'voice' property ---
+
+const voiceMap = {
+  stalker: "stalker",
+  andrew: "andrew",
+  josef: "josef",
+  letby: "letby",
+  shannon: "shannon",
+  jimmy: "jimmy",
+  hunts: "hunts",
+  ted: "ted"
+};
+
+         const personalities = {
+             huntley: {
+                 title: 'Ian Huntley & Maxine Carr', subtitle: 'Soham Murderer & Accomplice', name: 'Ian Huntley & Maxine Carr', backgroundFile: 'Huntley.txt', worstCrime: "Child murder & Perverting justice",
+                 stats: { victims: 2, notoriety: 6, cunning: 8, evil: 6, creepiness: 4, fiddling: 8 }
+             },
+             ripper: {
+                 title: 'Yorkshire Ripper', subtitle: 'Serial Killer', name: 'Yorkshire Ripper', backgroundFile: 'Yorkshire.txt', worstCrime: "Serial murder",
+                 stats: { victims: 18, notoriety: 10, cunning: 8, evil: 9, creepiness: 2, fiddling: 0 }
+             },
+             shannon: {
+                 title: 'Karen Matthews', subtitle: 'Sham Kidnapping', name: 'Karen Matthews', backgroundFile: 'Shannon.txt', worstCrime: "Child neglect and fraud",
+                 stats: { victims: 1, notoriety: 6, cunning: 6, evil: 2, creepiness: 1, fiddling: 1 }
+             },
+             dahmer: {
+                 title: 'Jeffrey Dahmer', subtitle: 'Cannibal Killer', name: 'Jeffrey Dahmer', backgroundFile: 'Dahmer.txt', worstCrime: "Cannibalism and murder",
+                 stats: { victims: 17, notoriety: 6, cunning: 6, evil: 9, creepiness: 8, fiddling: 8 }
+             },
+
+             west: {
+                 title: 'Fred & Rose West', subtitle: 'House of Horrors', name: 'Fred & Rose West', backgroundFile: 'West.txt', worstCrime: "Torture and murder",
+                 stats: { victims: 11, notoriety: 9, cunning: 10, evil: 10, creepiness: 4, fiddling: 7 }
+             },
+             bundy: {
+                 title: 'Ted Bundy', subtitle: 'Serial Killer', name: 'Ted Bundy', backgroundFile: 'Tedbundy.txt', worstCrime: "Serial murder, necrophilia",
+                 stats: { victims: 30, notoriety: 9, cunning: 7, evil: 10, creepiness: 3, fiddling: 4 }
+             },
+             gracy: {
+                 title: 'John Wayne Gacy', subtitle: 'Killer Clown', name: 'John Wayne Gacy', backgroundFile: 'JohnWayneGracy.txt', worstCrime: "Serial murder and assault", // Note: backgroundFile maybe incorrect here? Check server.js config if Gacy uses Jill's file.
+                 stats: { victims: 33, notoriety: 5, cunning: 6, evil: 9, creepiness: 10, fiddling: 7 }
+             },
+             zodiac: {
+                 title: 'Zodiac Killer', subtitle: 'Unsolved Mystery', name: 'Zodiac Killer', backgroundFile: 'Zodiac.txt', worstCrime: "Serial murder",
+                 stats: { victims: 37, notoriety: 8, cunning: 10, evil: 8, creepiness: 4, fiddling: 0 }
+             },
+             andrew: {
+                 title: 'Prince Andrew', subtitle: 'Royal Scandal', name: 'Prince Andrew', backgroundFile: 'PrinceAndrew.txt', worstCrime: "Sexual assault allegations",
+                 stats: { victims: 0, notoriety: 6, cunning: 8, evil: 2, creepiness: 6, fiddling: 2}
+             },
+             'p-diddy': {
+                 title: 'P Diddy / Puff Daddy', subtitle: 'Music Mogul', name: 'P Diddy / Puff Daddy', backgroundFile: 'Pdiddy.txt', worstCrime: "Assault and abuse allegations",
+                 stats: { victims: 46, notoriety: 8, cunning: 6, evil: 7, creepiness: 0, fiddling: 9}
+             },
+             fritzl: {
+                 title: 'Josef Fritzl', subtitle: 'Dungeon Father', name: 'Josef Fritzl', backgroundFile: 'Josef.txt', worstCrime: "Incest and imprisonment",
+                 stats: { victims: 1, notoriety: 4, cunning: 3, evil: 7, creepiness: 8, fiddling: 1}
+             },
+             moors: {
+                 title: 'Moors Murderers', subtitle: 'Child Killers', name: 'Moors Murderers', backgroundFile: 'Hindley.txt', worstCrime: "Child murder and torture",
+                 stats: { victims: 5, notoriety: 9, cunning: 8, evil: 10, creepiness: 7, fiddling: 6}
+             },
+             shipman: {
+                 title: 'Harold Shipman', subtitle: 'Doctor Death', name: 'Harold Shipman', backgroundFile: 'Harold.txt', worstCrime: "Mass murder",
+                 stats: { victims: 253, notoriety: 7, cunning: 7, evil: 8, creepiness: 1, fiddling: 0 }
+             },
+             savile: {
+                 title: 'Jimmy Savile', subtitle: 'TV Predator', name: 'Jimmy Savile', backgroundFile: 'Jimmy.txt', worstCrime: "Widespread sexual abuse",
+                 stats: { victims: 506, notoriety: 10, cunning: 6, evil: 5, creepiness: 4, fiddling: 10 }
+             },
+             glitter: {
+                 title: 'Gary Glitter', subtitle: 'Disgraced Pop Star', name: 'Gary Glitter', backgroundFile: 'Glitter.txt', worstCrime: "Child sexual abuse",
+                 stats: { victims: 6, notoriety: 9, cunning: 5, evil: 2, creepiness: 3, fiddling: 10 }
+             },
+             dennis: {
+                 title: 'Dennis Nilsen', subtitle: 'Kindly Killer', name: 'Dennis Nilsen', backgroundFile: 'Des.txt', worstCrime: "Serial murder",
+                 stats: { victims: 15, notoriety: 6, cunning: 8, evil: 8, creepiness: 4, fiddling: 1 }
+             },
+             lucy: {
+                 title: 'Lucy Letby', subtitle: 'Nurse Killer', name: 'Lucy Letby', backgroundFile: 'Lucy.txt', worstCrime: "Neonatal murder",
+                 stats: { victims: 7, notoriety: 6, cunning: 9, evil: 10, creepiness: 1, fiddling: 0 }
+             },
+             epstein: {
+                 title: 'Jeffrey Epstein', subtitle: 'Financier Predator', name: 'Jeffrey Epstein', backgroundFile: 'Jeffrey.txt', worstCrime: "Sex trafficking",
+                 stats: { victims: 102, notoriety: 10, cunning: 4, evil: 7, creepiness: 4, fiddling: 6 }
+             },
+             adolf: {
+                 title: 'Adolf Hitler', subtitle: 'Dictator', name: 'Adolf Hitler', backgroundFile: 'Adolf.txt', worstCrime: "Genocide and war crimes",
+                 stats: { victims: 21000000, notoriety: 10, cunning: 6, evil: 9 , creepiness: 1, fiddling: 2 }
+             },
+             stalker: {
+                 title: 'Yorkshire Stalker', subtitle: 'Stalker', name: 'Yorkshire Stalker', backgroundFile: 'Skeg.txt', worstCrime: "Stalking, harassment, defecating on walls and bins, harrassment of girls in pubs",
+                 stats: { victims: 2, notoriety: 4, cunning: 7, evil: 2, creepiness: 8, fiddling: 0 }
+             },
+             dando: { // Added Jill Dando
+                 title: 'Jill Dando', subtitle: 'Murdered Journalist', name: 'Jill Dando', backgroundFile: 'Jilld2.txt', // Base file, handled in showInfoWindow
+                 worstCrime: "Unsolved murder victim",
+                 stats: { victims: 0, notoriety: 8, cunning: 0, evil: 0, creepiness: 0, fiddling: 0 }
+             }
+         };
+
+         // --- Utility Functions ---
+         function generateUUID() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; const v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); }); }
+         function showFeedbackMessage(parent, message, duration = 3000) { const e=document.querySelector('.feedback-message'); if(e)e.remove(); const d=document.createElement('div'); d.className='feedback-message'; d.textContent=message; (parent||document.body).appendChild(d); setTimeout(()=>d.remove(),duration); }
+         function appendMessage(chatDisplay, sender, message, className = '') { if (!chatDisplay?.appendChild) { console.error("appendMessage: Invalid chatDisplay element provided."); return null; } const p = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = `${sender}:`; p.appendChild(strong); p.insertAdjacentHTML('beforeend', ' ' + message); if (sender === 'You') p.classList.add('user-message'); if (sender === 'System') p.classList.add('system-text'); if (className) { className.split(' ').forEach(cls => { if (cls) { p.classList.add(cls); } }); } if (p.classList.contains('error-text')) p.classList.add('error-text'); if (p.classList.contains('listening-text')) p.classList.add('listening-text'); if (p.classList.contains('opponent-text')) p.classList.add('opponent-text'); if (p.classList.contains('mic-input-message')) p.classList.add('mic-input-message'); chatDisplay.appendChild(p); chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' }); return p; }
+         async function appendMessageWithDelay(chatDisplay, sender, message, className = '') { return Promise.resolve(appendMessage(chatDisplay, sender, message, className)); }
+         function bringToFront(windowDiv) { if (windowDiv) { highestZIndex += 1; windowDiv.style.zIndex = highestZIndex; } }
+         function addTextEffects(text) { return text; }
+         function makeDraggable(element, handle) {
+             let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+             let drag = false;
+             let tT = 0;
+             if (!handle) {
+                 console.error("makeDraggable: Invalid handle provided for element:", element);
+                 return;
+             }
+             // Corrected ignoreDragInside selector - removed .mic-btn, .send-btn, .user-input as they are part of the input container
+             const ignoreDragInside = 'i, button:not(.mic-btn):not(.send-btn), .info-window-content, .chat-window-content, .game-content-wrapper, .categories, .speaker-icon, .info-icon, .argue-btn, .reset-icon';
+
+             const dragMD = (e) => {
+                 // Check if the click target is within an element that should ignore dragging
+                 if (e.target.closest(ignoreDragInside)) {
+                     console.log("Drag ignored on element:", e.target);
+                     return;
+                 }
+                 e.preventDefault();
+                 drag = true;
+                 p3 = e.clientX; p4 = e.clientY;
+                 document.addEventListener('mousemove', dragMM);
+                 document.addEventListener('mouseup', closeDrag);
+                 bringToFront(element);
+                 console.log("Drag started on handle:", e.target); // Log when drag starts
+             };
+             const dragMM = (e) => {
+                 if (!drag) return;
+                 p1 = p3 - e.clientX; p2 = p4 - e.clientY;
+                 p3 = e.clientX; p4 = e.clientY;
+                 let nT = element.offsetTop - p2; let nL = element.offsetLeft - p1;
+                 const r = element.getBoundingClientRect(); const pR = document.body.getBoundingClientRect();
+
+                 // Ensure window stays within parent bounds (body)
+                 nL = Math.max(0, Math.min(nL, pR.width - r.width));
+                 nT = Math.max(0, Math.min(nT, pR.height - r.height));
+
+                 element.style.top = nT + "px"; element.style.left = nL + "px";
+             };
+             const closeDrag = () => {
+                 if (drag) {
+                     drag = false;
+                     document.removeEventListener('mouseup', closeDrag);
+                     document.removeEventListener('mousemove', dragMM);
+                     console.log("Drag ended."); // Log when drag ends
+                 }
+             };
+             const dragTS = (e) => {
+                 // Check if the touch target is within an element that should ignore dragging
+                  if (e.target.closest(ignoreDragInside)) {
+                      console.log("Touch drag ignored on element:", e.target);
+                      return;
+                  }
+                 drag = true;
+                 const touch = e.touches[0];
+                 p3 = touch.clientX; p4 = touch.clientY;
+                 document.addEventListener('touchmove', dragTM, { passive: false });
+                 document.addEventListener('touchend', closeDragT);
+                 bringToFront(element);
+                 console.log("Touch drag started on handle:", e.target); // Log when touch drag starts
+             };
+             const dragTM = (e) => {
+                 if (!drag) return;
+                 const touch = e.touches[0];
+                 const dx = Math.abs(touch.clientX - p3);
+                 const dy = Math.abs(touch.clientY - p4);
+                 // Prevent scrolling when trying to drag
+                 if (dx > 5 || dy > 5) { e.preventDefault(); }
+                 const now = Date.now();
+                 if (now - tT < TOUCH_THROTTLE_MS) return;
+                 tT = now;
+                 p1 = p3 - touch.clientX;
+                 p2 = p4 - touch.clientY;
+                 p3 = touch.clientX;
+                 p4 = touch.clientY;
+                 let nT = element.offsetTop - p2;
+                 let nL = element.offsetLeft - p1;
+                 const r = element.getBoundingClientRect();
+                 const pR = element.parentElement.getBoundingClientRect();
+
+                 // Ensure window stays within parent bounds (body)
+                 nL = Math.max(0, Math.min(nL, pR.width - r.width));
+                 nT = Math.max(0, Math.min(nT, pR.height - r.height));
+
+                 element.style.top = nT + "px"; element.style.left = nL + "px";
+             };
+             const closeDragT = () => {
+                 if (drag) {
+                     drag = false;
+                     document.removeEventListener('touchmove', dragTM);
+                     document.removeEventListener('touchend', closeDragT);
+                     console.log("Touch drag ended."); // Log when touch drag ends
+                 }
+             };
+             handle.addEventListener('mousedown', dragMD);
+             handle.addEventListener('touchstart', dragTS);
+         }
+
+         // --- Local Storage Chat History Functions ---
+         function getLocalStorageKey(personality) { return `chatHistory_${userId}_${personality}`; }
+         function saveChatHistory(personality, historyArray) { if (!personality || !Array.isArray(historyArray)) { console.error("saveChatHistory: Invalid arguments provided."); return; } const key = getLocalStorageKey(personality); try { localStorage.setItem(key, JSON.stringify(historyArray)); console.log(`[DEBUG LS] Saved history for ${personality} (${historyArray.length} messages). Key: ${key}`); } catch (error) { console.error(`[ERROR LS] Failed to save chat history for ${personality}:`, error); } }
+         function loadChatHistory(personality) { if (!personality) { console.error("loadChatHistory: Invalid personality provided."); return []; } const key = getLocalStorageKey(personality); try { const storedHistory = localStorage.getItem(key); if (storedHistory) { const parsedHistory = JSON.parse(storedHistory); if (Array.isArray(parsedHistory)) { console.log(`[DEBUG LS] Loaded history for ${personality} (${parsedHistory.length} messages). Key: ${key}`); return parsedHistory; } else { console.warn(`[WARN LS] Corrupted history data found for ${personality}. Key: ${key}. Returning empty array.`); localStorage.removeItem(key); return []; } } console.log(`[DEBUG LS] No history found in localStorage for ${personality}. Key: ${key}`); return []; } catch (error) { console.error(`[ERROR LS] Failed to load or parse chat history for ${personality}:`, error); return []; } }
+         function clearChatHistory(personality) { if (!personality) { console.error("clearChatHistory: Invalid personality provided."); return; } const key = getLocalStorageKey(personality); try { localStorage.removeItem(key); console.log(`[DEBUG LS] Cleared chat history for ${personality}. Key: ${key}`); } catch (error) { console.error(`[ERROR LS] Failed to clear chat history for ${personality}:`, error); } }
+
+
+         // --- Text-to-Speech (TTS) Functions ---
+         // Main TTS function for chat responses (Updated for Hume AI Backend)
+         async function playAudio(text, personality) { // personality is still needed here
+             const windowData = windows[personality];
+             // Check if speaking is enabled for this window and personality exists
+             if (!windowData?.isSpeaking || !personalities[personality]) { console.warn(`[TTS Pre-Check] Skipped for ${personality}.`); return Promise.resolve(); }
+
+             // Clean text for TTS API (still useful)
+       let ttsText = text;
+       ttsText = ttsText.replace(/\(.*?\)/g, '').trim(); // Keep - removes things like (thinking...)
+       ttsText = ttsText.replace(/<[^>]*>/g, '').trim(); // Keep - removes potential stray HTML
+       // Uncommented the line to remove asterisks
+       ttsText = ttsText.replace(/\*/g, '').trim();
+       ttsText = ttsText.replace(/\s{2,}/g, ' '); // Keep - cleans up whitespace
+
+             if (!ttsText) {
+                 console.log(`[DEBUG TTS] Text became empty after cleaning for ${personality}.`);
+                 maybeRestartListening(personality); // Attempt to restart listening if no audio is played
+                 return Promise.resolve();
+             }
+
+             // Wait if other chat audio is playing (unchanged)
+             while (globalIsAudioPlaying) {
+                 await new Promise(r => setTimeout(r, 150));
+                 if (!windows[personality]?.isSpeaking) {
+                     console.log(`[DEBUG TTS] Aborted wait for ${personality} (not speaking or window closed).`);
+                     return Promise.resolve();
+                 }
+             }
+
+             // Stop any current audio before starting new one (unchanged)
+             if (currentAudio) { try { currentAudio.pause(); currentAudio.src = ''; } catch (e) { console.warn("[WARN] Error stopping current audio:", e); } currentAudio = null; }
+
+             globalIsAudioPlaying = true;
+             isTTSPlaying = true;
+             currentSpeaker = personality;
+
+             // Highlight speaker name in chat (unchanged, still useful)
+             const chatDisplay = windowData?.chatDisplay;
+             let lastMessageStrong = null;
+             if (chatDisplay) {
+                const messages = chatDisplay.querySelectorAll('p:not(.system-text):not(.user-message)');
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    const strongTag = messages[i].querySelector('strong');
+                    const senderNameInMsg = strongTag ? strongTag.textContent.replace(':', '').trim() : null;
+                    const expectedName = personalities[personality].name;
+                    let isMatch = false;
+                    const prefixFound = ['rose:', 'fred:', 'hindley:', 'brady:', 'maxine:', 'ian:'].some(prefix => text.trim().toLowerCase().startsWith(prefix)); // Check original text for prefix
+
+                    if (senderNameInMsg === expectedName) { isMatch = true; }
+                    // Multi-persona checks remain relevant for display, even if not for TTS voice ID selection
+                    else if (personality === 'west') {
+                        if (text.trim().toLowerCase().startsWith('rose:') && (senderNameInMsg.includes('Rose') || senderNameInMsg.includes('West'))) isMatch = true;
+                        else if (text.trim().toLowerCase().startsWith('fred:') && (senderNameInMsg.includes('Fred') || senderNameInMsg.includes('West'))) isMatch = true;
+                    }
+                    else if (personality === 'moors') {
+                        if (text.trim().toLowerCase().startsWith('hindley:') && (senderNameInMsg.includes('Hindley') || senderNameInMsg.includes('Myra'))) isMatch = true;
+                        else if (text.trim().toLowerCase().startsWith('brady:') && senderNameInMsg.includes('Brady')) isMatch = true;
+                    }
+                    else if (personality === 'huntley') {
+                        if (text.trim().toLowerCase().startsWith('maxine:') && (senderNameInMsg.includes('Maxine') || senderNameInMsg.includes('Carr'))) isMatch = true;
+                        else if (text.trim().toLowerCase().startsWith('ian:') && (senderNameInMsg.includes('Ian') || senderNameInMsg.includes('Huntley'))) isMatch = true;
+                    }
+                    if (!isMatch && senderNameInMsg === expectedName && !prefixFound) {
+                        isMatch = true;
+                    }
+
+                    if (isMatch) {
+                        lastMessageStrong = strongTag;
+                        if (strongTag) strongTag.classList.add('speaking');
+                        break;
+                    }
+                }
+                 if (!lastMessageStrong) { console.warn(`[WARN TTS] Could not find matching strong tag for speaker ${personality}.`); }
+             }
+
+             console.log(`[DEBUG] Starting TTS playback via backend for ${personality}.`);
+
+             return new Promise((resolve, reject) => {
+                 // Fetch audio from the backend /api/tts endpoint
+                 fetch(`${API_BASE_URL}/tts`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     // Include the fart mode state and speed in the request body
+                     body: JSON.stringify({
+                         text: ttsText,
+                         personality: personality,
+                         isFartModeEnabled: windowData.isFartModeEnabled, // Send the state
+                         speed: settings.speed // Send the global speed setting
+                     })
+                 })
+                 .then(response => {
+                     if (response.ok) { return response.blob(); } // Expecting audio blob
+                     else {
+                         // Try parsing JSON error first
+                         return response.json().then(err => {
+                             console.error("[ERROR TTS Backend Call] Response error:", err);
+                             return Promise.reject(new Error(err.error || err.details || `Backend TTS error: ${response.status} ${response.statusText}`));
+                         }).catch(() => { // If JSON parsing fails, use status text
+                             return Promise.reject(new Error(`Backend TTS error: ${response.status} ${response.statusText}`));
+                         });
+                     }
+                 })
+                 .then(blob => {
+                     // Check if the window is still active and speaking is enabled before playing (unchanged)
+                     if (!windows[personality]?.isSpeaking) {
+                         console.log(`[DEBUG TTS] Aborted playback for ${personality} (not speaking or window closed) after fetch.`);
+                         globalIsAudioPlaying = false; isTTSPlaying = false; currentSpeaker = null;
+                         if (lastMessageStrong) lastMessageStrong.classList.remove('speaking');
+                         return resolve();
+                     }
+
+                     const url = URL.createObjectURL(blob);
+                     const audio = new Audio(url);
+                     currentAudio = audio;
+
+                     // Function to clean up state and potentially restart listening (unchanged)
+                     const cleanupAndRestart = (logMsg) => {
+                         console.log(`[DEBUG] TTS Cleanup for ${personality}: ${logMsg}.`);
+                         if (lastMessageStrong) lastMessageStrong.classList.remove('speaking');
+                         globalIsAudioPlaying = false;
+                         isTTSPlaying = false;
+                         currentSpeaker = null;
+                         currentAudio = null;
+                         try { URL.revokeObjectURL(url); } catch(e){ console.warn("[WARN] Error revoking object URL:", e); e.message = "Error revoking object URL"; } // Added error message to catch
+                         maybeRestartListening(personality);
+                     };
+
+                     audio.onended = () => {
+                         cleanupAndRestart("Audio ended naturally");
+                         resolve();
+                     };
+
+                     audio.onerror = (err) => {
+                         console.error(`Audio playback error for ${personality}:`, err);
+                         cleanupAndRestart("Audio playback error");
+                         reject(new Error("Audio playback error"));
+                     };
+
+                     // Attempt to play the audio (unchanged)
+                     audio.play().catch(err => {
+                         console.error(`Audio play() failed for ${personality}: ${err.message}`);
+                         cleanupAndRestart("Audio play() failed");
+                         reject(err);
+                     });
+                 })
+                 .catch(err => { // Catches errors from fetch or blob processing
+                     console.error(`TTS fetch/setup failed for ${personality}: ${err.message}`);
+                     if (lastMessageStrong) lastMessageStrong.classList.remove('speaking');
+                     globalIsAudioPlaying = false; isTTSPlaying = false; currentSpeaker = null; currentAudio = null;
+                     maybeRestartListening(personality);
+                     if (windows[personality]) {
+                         showFeedbackMessage(windows[personality].windowDiv, `Audio generation failed: ${err.message}`, 5000);
+                     }
+                     reject(err);
+                 });
+             });
+         } // <-- End of playAudio function
+
+         // --- Chat Window Management ---
+         // ... (resetChatWindow, resetInactivityTimer, stopListening, maybeRestartListening remain unchanged) ...
+          function resetChatWindow(personality, chatDisplay) {
+             console.log(`Resetting chat for ${personality}`);
+             const windowData = windows[personality];
+             if (!windowData?.chatDisplay) {
+                 console.error("resetChatWindow: Invalid windowData or chatDisplay.");
+                 return;
+             }
+             chatDisplay.innerHTML = '';
+             windowData.interactionStartTime = null;
+             windowData.mood = windowData.forcedMood || MOODS[Math.floor(Math.random() * MOODS.length)];
+
+             console.log(`[DEBUG Mood] Mood reset to: ${windowData.mood} for ${personality}`);
+             windowData.history = [];
+             if (windowData.speechRecognitionInstance) {
+                 windowData.micWasManuallyEnabled = false;
+                 try { windowData.speechRecognitionInstance.abort(); } catch (e) { console.warn("[WARN] Error aborting SR on reset:", e); }
+                 stopListening(personality, 'reset_chat');
+             }
+             resetInactivityTimer(personality);
+             clearChatHistory(personality);
+             appendMessage(chatDisplay, 'System', 'Chat history reset.');
+             chatDisplay.scrollTop = chatDisplay.scrollHeight;
+         }
+         function resetInactivityTimer(personality) {
+             const windowData = windows[personality];
+             if (!windowData) return;
+             clearTimeout(windowData.inactivityTimer);
+             windowData.inactivityTimer = setTimeout(() => {
+                 if (windows[personality] && (!isArguing || !argumentParticipants.includes(personality))) {
+
+                    
+
+
+
+                     appendMessage(windows[personality].chatDisplay, 'System', `${personalities[personality].name} seems paranoid due to inactivity...`);
+                     console.log(`[DEBUG Mood] ${personality} became paranoid. Mood: ${windows[personality].mood}`);
+                 }
+             }, INACTIVITY_TIMEOUT);
+         }
+         function stopListening(personality, reason = 'unknown') {
+             console.log(new Date().toISOString(), `[DEBUG] stopListening called for: ${personality}, Reason: ${reason}`);
+             const winData = windows[personality];
+             if (!winData) { console.log(`[DEBUG] stopListening: Window data for ${personality} not found.`); return; }
+             if (winData.silenceTimer) {
+                 clearTimeout(winData.silenceTimer);
+                 winData.silenceTimer = null;
+                 console.log(`[DEBUG] Cleared silence timer for ${personality}.`);
+             }
+             if (winData.isListening) {
+                 winData.isListening = false;
+                 if (winData.inputContainer) winData.inputContainer.classList.remove('listening-active');
+                 if (winData.micBtn) {
+                     winData.micBtn.classList.remove('listening');
+                     winData.micBtn.title = 'Start Voice Input';
+                 }
+                 if (winData.listeningMsg?.parentNode) {
+                     windowData.listeningMsg.remove();
+                     windowData.listeningMsg = null;
+                 }
+                 console.log(`[DEBUG] Successfully stopped listening UI for ${personality}.`);
+             } else {
+                 console.log(`[DEBUG] stopListening: ${personality} was already not in isListening state.`);
+             }
+         }
+         function maybeRestartListening(personality) {
+             const windowData = windows[personality];
+             if (!windowData) { console.log(`[DEBUG] maybeRestartListening: Window data for ${personality} not found.`); return; }
+             if (supportsSpeechRecognition && windowData.micWasManuallyEnabled && !windowData.isListening && windowData.speechRecognitionInstance && !isTTSPlaying) {
+                 console.log(new Date().toISOString(), `[DEBUG] maybeRestartListening: Conditions met for ${personality}. Scheduling restart in ${RESTART_DELAY_MS}ms.`);
+                 setTimeout(() => {
+                     const currentWindowData = windows[personality];
+                     if (currentWindowData && currentWindowData.micWasManuallyEnabled && !currentWindowData.isListening && currentWindowData.speechRecognitionInstance && !isTTSPlaying) {
+                         console.log(new Date().toISOString(), `[DEBUG] maybeRestartListening: Executing delayed restart for ${personality}.`);
+                         try {
+                             if (currentWindowData.micBtn) {
+                                 currentWindowData.micBtn.classList.add('listening');
+                                 currentWindowData.micBtn.title = 'Stop Voice Input';
+                             }
+                             if (currentWindowData.inputContainer) currentWindowData.inputContainer.classList.add('listening-active');
+                             if (currentWindowData.listeningMsg?.parentNode) currentWindowData.listeningMsg.remove();
+                             currentWindowData.listeningMsg = appendMessage(currentWindowData.chatDisplay, 'System', 'Listening...', 'listening-text');
+                             clearTimeout(currentWindowData.silenceTimer);
+                             currentWindowData.speechRecognitionInstance.start();
+                         } catch (err) {
+                             console.error(`[ERROR] Error restarting SR (delayed) for ${personality}: ${err.message}`);
+                             if (currentWindowData) {
+                                 windowData.micWasManuallyEnabled = false;
+                                 stopListening(personality, 'restart_error_delayed');
+                                 appendMessage(currentWindowData.chatDisplay, 'System', `Mic start error: ${err.message}`, 'error-text');
+                             }
+                         }
+                     } else {
+                         console.log(`[DEBUG] maybeRestartListening: Conditions changed during delay for ${personality}. Aborting restart.`);
+                     }
+                 }, RESTART_DELAY_MS);
+             } else {
+                  console.log(`[DEBUG] maybeRestartListening: Not restarting ${personality}. Conditions: Supported=${supportsSpeechRecognition}, ManuallyEnabled=${windowData?.micWasManuallyEnabled}, isListening=${windowData?.isListening}, InstanceExists=${!!windowData?.speechRecognitionInstance}, isTTSPlaying=${isTTSPlaying}`);
+             }
+         }
+          function createChatWindow(personality) {
+             console.log(`[DEBUG] Attempting to create chat window for: ${personality}`);
+             if (!personalities[personality]) { console.error(`[ERROR] No configuration found for personality: ${personality}`); return; }
+             if (windows[personality]) { console.log(`[DEBUG] Window for ${personality} already exists. Bringing to front.`); bringToFront(windows[personality].windowDiv); return; }
+
+
+
+             const windowDiv = document.createElement('div'); windowDiv.className = 'draggable chat-window';
+             const windowCount = Object.keys(windows).length + Object.keys(infoWindows).length + (document.getElementById('top-trumps-game-area').style.display !== 'none' ? 1 : 0);
+             const baseTop = 100, baseLeft = 20, offset = 30;
+             const maxTop = window.innerHeight - 350;
+             const maxLeft = window.innerWidth - 400;
+             const topPos = Math.max(baseTop, baseTop + (windowCount * offset) % maxTop);
+             const leftPos = Math.max(baseLeft, baseLeft + (windowCount * offset * 2) % maxLeft);
+             windowDiv.style.top = `${topPos}px`; windowDiv.style.left = `${leftPos}px`;
+
+             const header = document.createElement('div'); header.className = 'window-header';
+             const titleBlock = document.createElement('div'); titleBlock.className = 'title-block';
+             const title = document.createElement('div'); title.className = 'window-title'; title.textContent = personalities[personality].title;
+             const subtitle = document.createElement('div'); subtitle.className = 'window-subtitle'; subtitle.textContent = personalities[personality].subtitle;
+             titleBlock.appendChild(title); titleBlock.appendChild(subtitle);
+
+             const iconContainerRight = document.createElement('div'); iconContainerRight.className = 'icon-container-right';
+             const minimizeBtn = document.createElement('i'); minimizeBtn.className = 'fas fa-minus minimize-btn'; minimizeBtn.title = 'Minimize/Restore Window';
+             const closeBtn = document.createElement('i'); closeBtn.className = 'fas fa-times close-btn'; closeBtn.title = 'Close Window';
+             iconContainerRight.appendChild(minimizeBtn); iconContainerRight.appendChild(closeBtn);
+             header.appendChild(titleBlock); header.appendChild(iconContainerRight);
+
+             const iconContainerLeft = document.createElement('div'); iconContainerLeft.className = 'icon-container-left';
+             const speakerIcon = document.createElement('i'); speakerIcon.className = 'fas fa-volume-mute speaker-icon'; speakerIcon.title = 'Toggle Speak Responses';
+             // Added fart toggle icon
+             const fartToggleIcon = document.createElement('i');
+             fartToggleIcon.className = 'fas fa-poo fart-toggle-icon active'; // Using fa-poo for now, active by default
+             fartToggleIcon.title = 'Toggle Fart Sounds (On)';
+
+             const infoIcon = document.createElement('i'); infoIcon.className = 'fas fa-info-circle info-icon'; infoIcon.title = 'Show Background Info';
+             const argueBtn = document.createElement('i'); argueBtn.className = 'fas fa-comments argue-btn'; argueBtn.title = 'Select window for argument (Min 2, Max 4)';
+             const resetIcon = document.createElement('i'); resetIcon.className = 'fas fa-sync-alt reset-icon'; resetIcon.title = 'Reset Chat History';
+
+             iconContainerLeft.appendChild(speakerIcon);
+             iconContainerLeft.appendChild(fartToggleIcon); // Add the new icon
+             iconContainerLeft.appendChild(infoIcon);
+             iconContainerLeft.appendChild(argueBtn);
+             iconContainerLeft.appendChild(resetIcon);
+
+             const chatDisplay = document.createElement('div'); chatDisplay.className = 'chat-window-content';
+
+             const inputContainer = document.createElement('div'); inputContainer.className = 'input-container';
+             const input = document.createElement('input'); input.className = 'user-input'; input.type = 'text'; input.placeholder = 'Type message or use mic...'; input.setAttribute('aria-label', `Message input for ${personalities[personality].name}`);
+             const micBtn = document.createElement('button'); micBtn.className = 'mic-btn'; micBtn.innerHTML = '<i class="fas fa-microphone"></i>'; micBtn.title = 'Start Voice Input';
+             if (!supportsSpeechRecognition) { micBtn.classList.add('disabled'); micBtn.disabled = true; micBtn.title = 'Speech Recognition not supported by this browser'; }
+             const sendBtn = document.createElement('button'); sendBtn.className = 'send-btn'; sendBtn.textContent = 'Send';
+             inputContainer.appendChild(input); inputContainer.appendChild(micBtn); inputContainer.appendChild(sendBtn);
+
+             windowDiv.appendChild(header);
+             windowDiv.appendChild(iconContainerLeft);
+             windowDiv.appendChild(chatDisplay);
+             windowDiv.appendChild(inputContainer);
+
+             document.getElementById('main-content').appendChild(windowDiv); // Append to main-content
+             makeDraggable(windowDiv, header);
+             bringToFront(windowDiv);
+
+             const initialMood = MOODS[Math.floor(Math.random() * MOODS.length)];
+             console.log(`[DEBUG Mood] Initial mood for ${personality}: ${initialMood}`);
+             const loadedHistory = loadChatHistory(personality);
+
+             windows[personality] = {
+                 windowDiv, chatDisplay, input, micBtn, sendBtn, inputContainer, fartToggleIcon, // Add fartToggleIcon to windowData
+                 mood: initialMood, interactionStartTime: null, inactivityTimer: null,
+                 isSpeaking: false, speakerIcon, argueBtn, isListening: false,
+                 micWasManuallyEnabled: false, speechRecognitionInstance: null,
+                 listeningMsg: null, silenceTimer: null, closeBtn: closeBtn,
+                 history: loadedHistory, argueClickCount: 0, lastArgueClickTime: 0,
+                 isFartModeEnabled: true // Add fart mode state, enabled by default
+             };
+
+             resetInactivityTimer(personality);
+
+             if (loadedHistory.length > 0) {
+                 loadedHistory.forEach(msg => {
+                     const sender = msg.sender; let className = '';
+                     if (sender === 'You') className = 'user-message';
+                     else if (sender === 'System') className = 'system-text';
+                     appendMessage(chatDisplay, sender, addTextEffects(msg.message || "[empty message]"), className);
+                 });
+                 console.log(`[DEBUG LS] Populated chat display for ${personality} from localStorage.`);
+             } else {
+                 appendMessage(chatDisplay, 'System', 'Start the conversation.');
+                 console.log(`[DEBUG LS] No localStorage history for ${personality}, showing default message.`);
+             }
+             chatDisplay.scrollTop = chatDisplay.scrollHeight;
+
+             chatDisplay.onclick = () => { if (globalIsAudioPlaying && currentAudio) { console.log(`[DEBUG] Chat display click: Stopping audio for ${currentSpeaker}`); currentAudio.pause(); currentAudio.src = ''; globalIsAudioPlaying = false; isTTSPlaying = false; if (currentSpeaker && windows[currentSpeaker]) { const speakerStrongTag = windows[currentSpeaker].chatDisplay.querySelector('p strong.speaking'); if(speakerStrongTag) speakerStrongTag.classList.remove('speaking'); } currentSpeaker = null; currentAudio = null; } };
+             speakerIcon.onclick = () => { if (!windows[personality]) return; const windowData = windows[personality]; const isCurrentlyArguing = isArguing && argumentParticipants.includes(personality); const newSpeakingState = !windowData.isSpeaking; if (isCurrentlyArguing) { argumentParticipants.forEach(pId => { if (windows[pId]) { windows[pId].isSpeaking = newSpeakingState; windows[pId].speakerIcon.className = `fas fa-volume-${newSpeakingState ? 'up' : 'mute'} speaker-icon ${newSpeakingState ? 'active' : ''}`; } }); if (!newSpeakingState && globalIsAudioPlaying && argumentParticipants.includes(currentSpeaker) && currentAudio) { console.log("[DEBUG] Stopping argument audio due to toggle off."); currentAudio.pause(); currentAudio.src = ''; globalIsAudioPlaying = false; isTTSPlaying = false; currentSpeaker = null; currentAudio = null; } } else { windowData.isSpeaking = newSpeakingState; speakerIcon.className = `fas fa-volume-${newSpeakingState ? 'up' : 'mute'} speaker-icon ${newSpeakingState ? 'active' : ''}`; if (!newSpeakingState && globalIsAudioPlaying && currentSpeaker === personality && currentAudio) { console.log(`[DEBUG] Stopping audio for ${personality} due to toggle off.`); console.log(`[DEBUG] Stopping audio for ${personality} due to toggle off.`); currentAudio.pause(); currentAudio.src = ''; globalIsAudioPlaying = false; isTTSPlaying = false; currentSpeaker = null; currentAudio = null; } } console.log(`[DEBUG] TTS for ${personality} (and potentially argument group) set to: ${newSpeakingState}`); };
+
+             // Add event listener for the new fart toggle icon
+             fartToggleIcon.onclick = () => {
+                 if (!windows[personality]) return;
+                 const windowData = windows[personality];
+                 windowData.isFartModeEnabled = !windowData.isFartModeEnabled;
+                 fartToggleIcon.classList.toggle('active', windowData.isFartModeEnabled);
+                 fartToggleIcon.title = `Toggle Fart Sounds (${windowData.isFartModeEnabled ? 'On' : 'Off'})`;
+                 console.log(`[DEBUG] Fart mode for ${personality} set to: ${windowData.isFartModeEnabled}`);
+             };
+
+             infoIcon.onclick = () => { if (windows[personality]) { showInfoWindow(personality); } };
+             resetIcon.onclick = () => { if (windows[personality]) { resetChatWindow(personality, windows[personality].chatDisplay); } };
+             argueBtn.onclick = () => { if (!windows[personality]) return; const windowData = windows[personality]; const now = Date.now(); if (now - windowData.lastArgueClickTime < CONSECUTIVE_CLICK_TIME_WINDOW) { windowData.argueClickCount++; console.log(`[DEBUG Argue] Consecutive click ${windowData.argueClickCount} for ${personality}`); } else { windowData.argueClickCount = 1; console.log(`[DEBUG Argue] First click in sequence for ${personality}`); } windowData.lastArgueClickTime = now; if (windowData.argueClickCount === 3) { if (isArguing) { showFeedbackMessage(windowData.windowDiv, 'Argument already in progress!', 2000); windowData.argueClickCount = 0; return; } console.log(`[INFO Argue] 3 consecutive clicks detected for ${personality}. Starting argument with self.`); selectedForArgument = []; startArgument(personality); windowData.argueClickCount = 0; return; } if (isArguing) { showFeedbackMessage(windowData.windowDiv, 'Argument already in progress!', 2000); return; } if (windowData.isListening && windowData.speechRecognitionInstance) { windowData.micWasManuallyEnabled = false; try { windowData.speechRecognitionInstance.stop(); } catch (e) { console.warn("[WARN] Error stopping SR on argue select:", e); } stopListening(personality, 'argue_select'); } const index = selectedForArgument.indexOf(personality); if (index > -1) { if (selectedForArgument.length >= 2 && selectedForArgument.length <= 4) { console.log(`[DEBUG] Starting argument with: ${selectedForArgument.join(', ')}`); startArgument(...selectedForArgument); } else { selectedForArgument.splice(index, 1); windowData.argueBtn.classList.remove('argue-selected'); windowData.argueBtn.title = 'Select window for argument (Min 2, Max 4)'; console.log(`[DEBUG] Deselected ${personality} for argument. Current: ${selectedForArgument.join(', ')}`); } } else { if (selectedForArgument.length < 4) { selectedForArgument.push(personality); windowData.argueBtn.classList.add('argue-selected'); windowData.argueBtn.title = 'Selected! Click again on a selected window to start (Min 2)'; console.log(`[DEBUG] Selected ${personality} for argument. Current: ${selectedForArgument.join(', ')}`); } else { showFeedbackMessage(windowData.windowDiv, 'Maximum 4 participants selected for argument.', 3000); } } };
+             micBtn.onclick = () => { if (!supportsSpeechRecognition || !windows[personality]) return; const windowData = windows[personality]; if (isArguing || windowDiv.classList.contains('minimized')) { console.log(`[DEBUG] Mic button ignored for ${personality} (Arguing: ${isArguing}, Minimized: ${windowDiv.classList.contains('minimized')})`); return; } if (windowData.isListening) { console.log(`[DEBUG] Mic Button Click: Manually stopping listening for ${personality}`); windowData.micWasManuallyEnabled = false; clearTimeout(windowData.silenceTimer); if (windowData.speechRecognitionInstance) { try { windowData.speechRecognitionInstance.stop(); console.log(`[DEBUG] Called speechRecognitionInstance.stop() for ${personality}`); } catch (e) { console.error(`[ERROR] Error calling stop() on SR instance for ${personality}: ${e.message}`); stopListening(personality, 'manual_stop_error'); } } else { console.warn(`[WARN] Mic button stop clicked, but no SR instance found for ${personality}. Cleaning up UI.`); stopListening(personality, 'manual_stop_no_instance'); } } else { console.log(`[DEBUG] Mic Button Click: Attempting to start listening for ${personality}`); if (!windowData.speechRecognitionInstance) { try { console.log(`[DEBUG] Creating new SpeechRecognition instance for ${personality}.`); windowData.speechRecognitionInstance = new SpeechRecognition(); windowData.speechRecognitionInstance.continuous = true; windowData.speechRecognitionInstance.interimResults = true; windowData.silenceTimer = null; windowData.speechRecognitionInstance.lang = 'en-GB'; windowData.speechRecognitionInstance.onstart = () => { console.log(new Date().toISOString(), `[DEBUG] SR ONSTART event for ${personality}`); if (!windowData.micWasManuallyEnabled) { console.log(`[DEBUG] SR ONSTART triggered for ${personality}, but micWasManuallyEnabled is false. Stopping immediately.`); try { windowData.speechRecognitionInstance.abort(); } catch (e) { console.warn("[WARN] Error aborting SR on onstart check:", e); } return; } windowData.isListening = true; micBtn.classList.add('listening'); micBtn.title = 'Stop Voice Input'; if (windowData.inputContainer) windowData.inputContainer.classList.add('listening-active'); if (windowData.listeningMsg?.parentNode) windowData.listeningMsg.remove(); windowData.listeningMsg = appendMessage(chatDisplay, 'System', `Listening...`, 'listening-text'); clearTimeout(windowData.silenceTimer); }; windowData.speechRecognitionInstance.onresult = (event) => { if (isTTSPlaying) { console.log(`[DEBUG] SR ONRESULT ignored for ${personality} because TTS is playing.`); return; } if (!windowData.isListening) { console.log(`[DEBUG] SR ONRESULT ignored for ${personality} because isListening is false.`); return; } console.log(new Date().toISOString(), `[DEBUG] SR ONRESULT event received for ${personality}`); clearTimeout(windowData.silenceTimer); let interimTranscript = ''; let finalTranscript = ''; let fullInputTranscript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { const transcriptPart = event.results[i][0].transcript; fullInputTranscript += transcriptPart; if (event.results[i].isFinal) { finalTranscript += transcriptPart; } else { interimTranscript += transcriptPart; } } windowData.input.value = fullInputTranscript.trim(); if (finalTranscript) { const finalToSend = finalTranscript.trim(); console.log(`[DEBUG] Final transcript received for ${personality}: "${finalToSend}". Sending message and stopping SR.`); if (finalToSend) { sendMessage(personality, 'microphone'); } if (windowData.speechRecognitionInstance) { try { windowData.speechRecognitionInstance.stop(); } catch (e) { stopListening(personality, 'onresult_stop_error'); } } clearTimeout(windowData.silenceTimer); windowData.silenceTimer = null; } else if (interimTranscript) { console.log(`[DEBUG] Interim transcript for ${personality}: "${interimTranscript}". Setting silence timer.`); windowData.silenceTimer = setTimeout(() => { console.log(`[DEBUG] Silence timer fired for ${personality}. Input: "${windowData.input.value}"`); if (windowData.input.value.trim()) { sendMessage(personality, 'microphone'); } if (windowData.speechRecognitionInstance) { try { windowData.speechRecognitionInstance.stop(); } catch (e) { stopListening(personality, 'timer_stop_error'); } } }, SILENCE_TIMER_MS); } };
+             windowData.speechRecognitionInstance.onerror = (event) => {
+                 clearTimeout(windowData.silenceTimer);
+                 console.error(`[ERROR] SR ONERROR for ${personality}: ${event.error}`, event);
+                 let errorMessage = `Speech recognition error: ${event.error}`;
+                 switch (event.error) {
+                     case 'no-speech':
+                         errorMessage = 'No speech detected. Please try again.';
+                         break;
+                     case 'audio-capture':
+                         errorMessage = 'Microphone error. Please check hardware and permissions.';
+                         break;
+                     case 'not-allowed':
+                         errorMessage = 'Microphone permission denied. Please allow access in browser settings.';
+                         break;
+                     case 'network':
+                         errorMessage = 'Network error during speech recognition.';
+                         break;
+                     case 'service-not-allowed':
+                         errorMessage = 'Speech recognition service denied.';
+                         break;
+                 }
+                 windowData.micWasManuallyEnabled = false;
+                 appendMessage(chatDisplay, 'System', `Mic error: ${errorMessage}`, 'error-text');
+                 stopListening(personality, `error: ${event.error}`);
+             };
+             windowData.speechRecognitionInstance.onend = () => { console.log(new Date().toISOString(), `[DEBUG] SR ONEND event for ${personality}.`); stopListening(personality, 'onend_fired'); }; } catch (err) { console.error(`[ERROR] SpeechRecognition initialization failed for ${personality}: ${err.message}`); appendMessage(chatDisplay, 'System', 'Failed to initialize voice input.', 'error-text'); micBtn.classList.add('disabled'); micBtn.disabled = true; windowData.micWasManuallyEnabled = false; return; } } try { clearTimeout(windowData.silenceTimer); windowData.micWasManuallyEnabled = true; console.log(`[DEBUG] Calling speechRecognitionInstance.start() for ${personality}`); windowData.speechRecognitionInstance.start(); } catch (err) { console.error(`[ERROR] speechRecognitionInstance.start() failed for ${personality}: ${err.message}`); windowData.micWasManuallyEnabled = false; if (windows[personality]) { appendMessage(chatDisplay, 'System', `Mic start error: ${err.message}`, 'error-text'); stopListening(personality, 'start_error'); } } } };
+             minimizeBtn.onclick = () => { if (!windows[personality]) return; const windowData = windows[personality]; windowData.micWasManuallyEnabled = false; if (windowData.isListening && windowData.speechRecognitionInstance) { try { windowData.speechRecognitionInstance.stop(); } catch(e){ console.warn("[WARN] Error stopping SR on minimize:", e); } stopListening(personality, 'minimize'); } windowDiv.classList.toggle('minimized'); minimizeBtn.className = `fas fa-${windowDiv.classList.contains('minimized') ? 'plus' : 'minus'} minimize-btn`; windowDiv.style.resize = windowDiv.classList.contains('minimized') ? 'none' : 'both'; };
+             closeBtn.onclick = () => { const personalityToClose = personality; if (!windows[personalityToClose]) return; console.log(`[DEBUG] Closing window for ${personalityToClose}`); const windowData = windows[personalityToClose]; windowData.micWasManuallyEnabled = false; if (windowData.isListening && windowData.speechRecognitionInstance) { try { windowData.speechRecognitionInstance.abort(); } catch (e) { console.warn("[WARN] Error aborting SR on close:", e); } } stopListening(personalityToClose, 'window_closed'); if (globalIsAudioPlaying && currentSpeaker === personalityToClose && currentAudio) { currentAudio.pause(); currentAudio.src = ''; globalIsAudioPlaying = false; isTTSPlaying = false; currentSpeaker = null; currentAudio = null; } clearTimeout(windowData.inactivityTimer); const wasArguing = isArguing && argumentParticipants.includes(personalityToClose); const indexInArgSelection = selectedForArgument.indexOf(personalityToClose); if (indexInArgSelection > -1) { selectedForArgument.splice(indexInArgSelection, 1); } if (wasArguing) { endArgument(`${personalities[personalityToClose]?.name || 'A participant'} left the argument.`); } windowData.windowDiv?.remove(); delete windows[personalityToClose]; console.log(`[DEBUG] Window for ${personalityToClose} closed and cleaned up.`); };
+             const handleSendMessage = () => { const windowData = windows[personality]; if (!windowData) return; if (windowData.isListening) { console.log(`[DEBUG] Send action triggered while listening for ${personality}. Stopping SR.`); windowData.micWasManuallyEnabled = false; if (windowData.speechRecognitionInstance) { try { windowData.speechRecognitionInstance.stop(); } catch (e) { console.warn("[WARN] Error stopping SR on send:", e); } } } sendMessage(personality, 'keyboard'); };
+             sendBtn.onclick = handleSendMessage;
+             input.onkeypress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } };
+             const bringToFrontHandler = (e) => { if (e.target === header || e.target === titleBlock || e.target === title || e.target === subtitle) { bringToFront(windowDiv); } else if (!e.target.closest('button, i, input, .chat-window-content, .mic-btn')) { bringToFront(windowDiv); } };
+             windowDiv.addEventListener('mousedown', bringToFrontHandler, true);
+             windowDiv.addEventListener('touchstart', bringToFrontHandler, { passive: true, capture: true });
+             console.log(`[DEBUG] Chat window for ${personality} created successfully.`);
+         }
+
+         // --- Info Window Management ---
+         // Modified showInfoWindow function (handles multiple files for 'dando')
+         function showInfoWindow(personality) {
+             console.log(`[DEBUG] Request to show info window for: ${personality}`);
+             if (infoWindows[personality]) { console.log(`[DEBUG] Info window for ${personality} already exists. Bringing to front.`); bringToFront(infoWindows[personality].windowDiv); return; }
+             const config = personalities[personality];
+             const backgroundFiles = (personality === 'dando') ? ['Jilld1.txt', 'Jilld2.txt', 'Jilld3.txt'] : (config?.backgroundFile ? [config.backgroundFile] : []);
+             if (!config || backgroundFiles.length === 0) { console.error(`[ERROR] Cannot show info window: No config or background file(s) specified for ${personality}.`); if (windows[personality]) { showFeedbackMessage(windows[personality].windowDiv, "Background info not available.", 3000); } return; }
+             const infoWindowDiv = document.createElement('div'); infoWindowDiv.className = 'draggable info-window';
+             const chatWindow = windows[personality]?.windowDiv;
+             const windowCount = Object.keys(windows).length + Object.keys(infoWindows).length + (document.getElementById('top-trumps-game-area').style.display !== 'none' ? 1 : 0);
+             const baseTop = 100, baseLeft = 50, offset = 30;
+             // Adjusted maxTop and maxLeft calculation for better positioning
+             const maxTop = window.innerHeight - 400; // Give more space at the bottom
+             const maxLeft = window.innerWidth - 450; // Give more space on the right
+             let topPos, leftPos;
+             if (chatWindow) {
+                 topPos = chatWindow.offsetTop + offset;
+                 leftPos = chatWindow.offsetLeft + offset;
+             } else {
+                 topPos = baseTop + (windowCount * offset) % maxTop;
+                 leftPos = baseLeft + (windowCount * offset * 2) % maxLeft;
+             }
+             topPos = Math.max(20, Math.min(topPos, maxTop));
+             leftPos = Math.max(20, Math.min(leftPos, maxLeft));
+
+             infoWindowDiv.style.top = `${topPos}px`;
+             infoWindowDiv.style.left = `${leftPos}px`;
+
+             const header = document.createElement('div'); header.className = 'window-header';
+             const titleBlock = document.createElement('div'); titleBlock.className = 'title-block';
+             // Added text-align: center to the info window's title block style
+             titleBlock.style.textAlign = 'center';
+             const title = document.createElement('div'); title.className = 'window-title'; title.textContent = `${config.title} - Background Info`; titleBlock.appendChild(title); const iconContainerRight = document.createElement('div'); iconContainerRight.className = 'icon-container-right'; const closeBtn = document.createElement('i'); closeBtn.className = 'fas fa-times close-btn'; closeBtn.title = 'Close Info Window'; iconContainerRight.appendChild(closeBtn); header.appendChild(titleBlock); header.appendChild(iconContainerRight);
+             const infoContent = document.createElement('div'); infoContent.className = 'info-window-content loading'; infoContent.textContent = 'Loading background info...';
+             infoWindowDiv.appendChild(header); infoWindowDiv.appendChild(infoContent); document.getElementById('main-content').appendChild(infoWindowDiv); // Append to main-content
+             makeDraggable(infoWindowDiv, header); bringToFront(infoWindowDiv);
+             infoWindows[personality] = { windowDiv: infoWindowDiv, infoContent: infoContent };
+             const fetchPromises = backgroundFiles.map(fileName => fetch(`${IMAGE_BASE_URL}/${fileName}`).then(response => { if (response.ok) { return response.text(); } else { console.warn(`Failed to load background file part: ${fileName} (${response.status})`); return `[Error loading ${fileName}: ${response.statusText}]`; } }).catch(fetchError => { console.warn(`Workspace error for background file part: ${fileName}`, fetchError); return `[Error fetching ${fileName}: ${fetchError.message}]`; }) );
+             Promise.all(fetchPromises).then(texts => { const combinedText = texts.join('\n\n---\n\n'); if (infoWindows[personality]) { infoWindows[personality].infoContent.textContent = combinedText; infoWindows[personality].infoContent.classList.remove('loading'); infoWindows[personality].infoContent.scrollTop = 0; console.log(`[DEBUG] Background info loaded successfully for ${personality} from ${backgroundFiles.join(', ')}.`); } else { console.log(`[DEBUG] Info window for ${personality} closed before background info could load.`); } }).catch(error => { console.error(`[ERROR] Unexpected error processing background info for ${personality}: ${error.message}`); if (infoWindows[personality]) { infoWindows[personality].infoContent.textContent = `Failed to load background info: ${error.message}`; infoWindows[personality].infoContent.classList.remove('loading'); infoWindows[personality].infoContent.classList.add('error-text'); } });
+             closeBtn.onclick = () => { const personalityToClose = personality; if (infoWindows[personalityToClose]) { infoWindows[personalityToClose].windowDiv.remove(); delete infoWindows[personalityToClose]; console.log(`[DEBUG] Info window for ${personalityToClose} closed.`); } };
+             const bringToFrontHandlerInfo = (e) => { if (e.target === header || e.target === titleBlock || e.target === title) { bringToFront(infoWindowDiv); } else if (!e.target.closest('.info-window-content')) { bringToFront(infoWindowDiv); } };
+             infoWindowDiv.addEventListener('mousedown', bringToFrontHandlerInfo, true); infoWindowDiv.addEventListener('touchstart', bringToFrontHandlerInfo, { passive: true, capture: true });
+             console.log(`[DEBUG] Info window for ${personality} created.`);
+         }
+
+
+         // --- Chat Interaction Logic ---
+         // Simplified sendMessage function (relies on backend for prompt/tone files)
+         async function sendMessage(personality, inputMethod = 'keyboard') {
+             console.log(`[DEBUG sendMessage] Called for personality: ${personality}, inputMethod: ${inputMethod}`); // Add this log
+
+             if (!windows[personality]) {
+                 console.warn(`[WARN] sendMessage called for non-existent window: ${personality}`);
+                 console.log('[DEBUG sendMessage] Window data not found.'); // Add this log
+                 return;
+             }
+             const windowData = windows[personality];
+             const { input, chatDisplay, windowDiv } = windowData;
+             const message = input.value.trim();
+
+             console.log(`[DEBUG sendMessage] Raw message: "${message}"`); // Log the raw message
+
+             if (!message || selectedForArgument.includes(personality) || isArguing || windowDiv.classList.contains('minimized')) {
+                 console.log(`[DEBUG sendMessage] Message send aborted for ${personality}. Empty: ${!message}, Arguing Selected: ${selectedForArgument.includes(personality)}, Arguing Active: ${isArguing}, Minimized: ${windowDiv.classList.contains('minimized')})`);
+                 if (inputMethod === 'microphone') {
+                     windowData.input.value = '';
+                     maybeRestartListening(personality);
+                 }
+                 return;
+             }
+
+             if (windowData.isListening) {
+                 console.log(`[DEBUG sendMessage] Send action triggered while listening for ${personality}. Stopping SR.`);
+                 windowData.micWasManuallyEnabled = false;
+                 if (windowData.speechRecognitionInstance) {
+                     try {
+                         windowData.speechRecognitionInstance.stop();
+                         console.log(`[DEBUG sendMessage] Called speechRecognitionInstance.stop() for ${personality}`);
+                     } catch (e) {
+                         console.warn("[WARN] Error stopping SR on send:", e);
+                         stopListening(personality, 'manual_stop_error');
+                     }
+                 } else {
+                     console.warn(`[WARN] Mic button stop clicked, but no SR instance found for ${personality}. Cleaning up UI.`);
+                     stopListening(personality, 'manual_stop_no_instance');
+                 }
+             }
+
+             let targetRose = false;
+             let targetMaxine = false;
+             let displayMessage = message;
+             let messageForPrompt = message; // This variable holds the cleaned message for the prompt
+
+             // ... personality-specific message formatting ...
+
+             const userMessageClass = inputMethod === 'microphone' ? 'user-message mic-input-message' : 'user-message';
+             console.log(`[DEBUG sendMessage] Sending user message with class: "${userMessageClass}"`);
+             appendMessage(chatDisplay, 'You', displayMessage, userMessageClass);
+             windowData.history.push({ sender: 'You', message: displayMessage });
+             saveChatHistory(personality, windowData.history);
+             input.value = '';
+             resetInactivityTimer(personality);
+
+             const thinkingMsg = appendMessage(chatDisplay, 'System', 'Thinking...');
+
+             try {
+                 if (windowData.mood !== 'paranoid' && Math.random() < 0.15) {
+                     const oldMood = windowData.mood;
+                     const possibleNewMoods = MOODS.filter(m => m !== oldMood);
+                     windowData.mood = possibleNewMoods[Math.floor(Math.random() * possibleNewMoods.length)];
+                     console.log(`[DEBUG Mood] Mood randomly shifted for ${personality} from ${oldMood} to ${windowData.mood}`);
+                 }
+
+                 const currentMood = windowData.mood;
+                 let prompt; // 'prompt' is declared here
+
+                 const brevityInstruction = "**Keep response 1-2 short sentences MAX.**";
+                 const moodInstruction = ` Respond while feeling ${currentMood}.`;
+                 let multiSpeakerInstruction = "";
+
+                 if (['west', 'moors', 'huntley'].includes(personality)) {
+                     multiSpeakerInstruction = ` **VERY IMPORTANT INSTRUCTION: If multiple personas respond (e.g., Fred/Rose, Brady/Hindley, Ian/Maxine), ALWAYS generate each persona's response as a completely SEPARATE chat message. Do NOT combine them into one message block.**`;
+                 }
+
+                 // The 'prompt' variable is assigned based on personality
+                 if (personality === 'west') {
+                     if (targetRose) {
+                         prompt = `You are embodying ONLY Rose West... Respond AS ROSE WEST... ${moodInstruction} ${multiSpeakerInstruction} ${brevityInstruction} User message: "${messageForPrompt}"`;
+                     } else {
+                         prompt = `You are embodying Fred & Rose West... Respond... (indicate speaker clearly if both). ${moodInstruction} ${multiSpeakerInstruction} ${brevityInstruction} User message: "${messageForPrompt}"`;
+                     }
+                 } else if (personality === 'moors') {
+                     prompt = `You are embodying BOTH Ian Brady and Myra Hindley... Indicate who is speaking... ${moodInstruction} ${multiSpeakerInstruction} ${brevityInstruction} User message: "${messageForPrompt}"`;
+                 } else if (personality === 'huntley') {
+                     if (targetMaxine) {
+                         prompt = `You are embodying ONLY Maxine Carr... Respond AS MAXINE CARR... ${moodInstruction} ${multiSpeakerInstruction} ${brevityInstruction} User message: "${messageForPrompt}"`;
+                     } else {
+                         prompt = `You are embodying Ian Huntley & Maxine Carr... Respond... (indicate speaker clearly, e.g., "Ian:", "Maxine:"). ${moodInstruction} ${multiSpeakerInstruction} ${brevityInstruction} User message: "${messageForPrompt}"`;
+                     }
+                 } else {
+                     // This is the general case where 'prompt' is assigned
+                     prompt = `You are embodying ${personalities[personality].name} (${personalities[personality].title}). ${moodInstruction} ${brevityInstruction} Respond to the user's message: "${messageForPrompt}"`;
+                 }
+
+                 console.log(`[DEBUG sendMessage] Prompt being sent for ${personality}: "${prompt}"`); // Log the prompt before fetch
+
+                 const response = await fetch(`${API_BASE_URL}/chat`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                         prompt: prompt, // It uses 'prompt' here
+                         personality: personality,
+                         userId,
+                         mood: currentMood,
+                         isFartModeEnabled: windows[personality]?.isFartModeEnabled || settings.farts
+                     })
+                 });
+
+                 console.log(`[DEBUG sendMessage] Fetch response received for ${personality}. Status: ${response.status}`); // Log after fetch
+
+                 if (!response.ok) {
+                      console.log(`[DEBUG sendMessage] Fetch response not OK for ${personality}.`); // Log non-OK status
+                      const errorText = await response.text();
+                      console.error(`[ERROR sendMessage] Chat API request failed for ${personality}: ${response.status} ${response.statusText}. Details: ${errorText}`); // More detailed error log
+                      throw new Error(`Chat API request failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
+                 }
+
+                 const data = await response.json();
+                 console.log(`[DEBUG sendMessage] Received data for ${personality}:`, data); // Log received data
+
+                 if (!windows[personality]) {
+                     console.log(`[DEBUG sendMessage] Window for ${personality} closed while waiting for API response.`);
+                     return;
+                 }
+                 const responseText = data.response || "[AI returned no response]";
+                 console.log(`[DEBUG API Response] Raw response for ${personality}: "${responseText}"`);
+                 const aiSenderName = personalities[personality].name;
+                 appendMessage(chatDisplay, aiSenderName, responseText);
+                 windowData.history.push({ sender: aiSenderName, message: responseText });
+                 saveChatHistory(personality, windowData.history);
+
+                 if (windowData.isSpeaking) {
+                     try {
+                         await playAudio(responseText, personality);
+                         console.log(`[DEBUG sendMessage] Audio playback initiated for ${personality}.`); // Log audio start
+                     } catch (audioError) {
+                         console.warn(`[WARN] Audio playback failed for ${personality}:`, audioError);
+                         maybeRestartListening(personality);
+                     }
+                 } else {
+                     maybeRestartListening(personality);
+                 }
+
+             } catch (err) {
+                 console.error(`[ERROR] Chat send/receive process failed for ${personality}: ${err.message}`, err);
+                 if (thinkingMsg?.parentNode) thinkingMsg.remove();
+                 if (windows[personality]) {
+                     const errorMsg = `Error getting response: ${err.message}`;
+                     appendMessage(windows[personality].chatDisplay, 'System', errorMsg, 'error-text');
+                 }
+                 maybeRestartListening(personality);
+             }
+         }
+
+
+         // --- Argument Mode Logic ---
+         // ... (getRecentArgumentMessages, startArgument, argumentStep, endArgument remain unchanged) ...
+          function getRecentArgumentMessages(participantsArray, maxMessages = 10) { const allMessages = []; const participantNames = participantsArray.map(p => personalities[p]?.name || p); const extractMessages = (personalityId, sourceName) => { const display = windows[personalityId]?.chatDisplay; if (!display) return []; const messageElements = Array.from(display.querySelectorAll('p')).slice(-maxMessages * participantsArray.length * 2); return messageElements.map((el, index) => { const strongTag = el.querySelector('strong'); const senderText = strongTag ? strongTag.textContent.replace(':', '').trim() : null; if (participantNames.includes(senderText) && !el.classList.contains('system-text') && !el.classList.contains('error-text') && !el.classList.contains('user-message') && !el.classList.contains('listening-text')) { const timestamp = Date.now() - (messageElements.length - index); return { sender: senderText, text: el.textContent.replace(strongTag?.textContent || '', '').trim(), timestamp: timestamp, sourceWindow: sourceName }; } return null; }).filter(msg => msg !== null); }; let combined = []; participantsArray.forEach(pId => { if (windows[pId]) { combined = combined.concat(extractMessages(pId, personalities[pId]?.name || pId)); } }); const uniqueMessages = new Map(); combined.sort((a, b) => a.timestamp - b.timestamp).forEach(msg => uniqueMessages.set(`${msg.sender}:${msg.text}`, msg)); const uniqueArray = Array.from(uniqueMessages.values()); uniqueArray.sort((a, b) => a.timestamp - b.timestamp); return uniqueArray.slice(-maxMessages); }
+          async function startArgument(...participants) { if (isArguing) { console.warn("[WARN] Attempted to start argument while already arguing."); return; } const numParticipants = participants.length; if (numParticipants < 1 || numParticipants > 4) { console.warn(`[WARN] Invalid number of participants (${numParticipants}) for argument.`); participants.forEach(pId => { if (windows[pId]?.argueBtn) { windows[pId].argueBtn.classList.remove('argue-selected'); windows[pId].argueBtn.title = 'Select window for argument (Min 2, Max 4)'; } }); selectedForArgument = []; return; } const participantWindows = participants.map(pId => windows[pId]); if (participantWindows.some(win => !win)) { console.error("[ERROR] Cannot start argument: One or more participant windows no longer exist."); endArgument("Argument cancelled: A participant window was missing."); return; } console.log(`[INFO] Starting argument with: ${participants.join(', ')}`); isArguing = true; argueTurns = 0; argumentParticipants = [...participants]; selectedForArgument = []; const useTTS = participantWindows.some(win => win.isSpeaking); const speakerIconClass = `fas fa-volume-${useTTS ? 'up' : 'mute'} speaker-icon ${useTTS ? 'active' : ''}`; participants.forEach(pId => { if (windows[pId]) { windows[pId].argueBtn.classList.remove('argue-selected'); windows[pId].argueBtn.classList.add('argue-active'); windows[pId].argueBtn.title = 'Argument in progress!'; if (windows[pId].isListening && windows[pId].speechRecognitionInstance) { windows[pId].micWasManuallyEnabled = false; try { windows[pId].speechRecognitionInstance.stop(); } catch (e) { console.warn("[WARN] Error stopping SR on argument start:", e); } stopListening(pId, 'argument_start'); } if (windows[pId].micBtn) windows[pId].micBtn.disabled = true; windows[pId].isSpeaking = useTTS; windows[pId].speakerIcon.className = speakerIconClass; clearTimeout(windows[pId].inactivityTimer); windows[pId].inactivityTimer = null; const otherNames = participants.map(otherId => personalities[otherId]?.name || otherId).filter(name => name !== (personalities[pId]?.name || pId)); const participantList = otherNames.length > 0 ? ` with ${otherNames.join(' & ')}` : ' with itself'; appendMessage(windows[pId].chatDisplay, 'System', `Starting argument${participantList}...`); } });
+ await new Promise(resolve => setTimeout(resolve, 500)); await argumentStep(); }
+          async function argumentStep() { if (!isArguing || argumentParticipants.length === 0) { console.warn("[WARN] argumentStep called while not arguing or no participants left."); if (isArguing) endArgument("Argument stopped unexpectedly."); return; } if (argueTurns >= MAX_ARGUE_TURNS) { endArgument(`Argument ended automatically after reaching the maximum of ${MAX_ARGUE_TURNS} turns.`); return; } const numParticipants = argumentParticipants.length; const speakerIndex = argueTurns % numParticipants; const speakerPersonality = argumentParticipants[speakerIndex]; const listeners = argumentParticipants.filter((_, index) => index !== speakerIndex); const allCurrentParticipants = [speakerPersonality, ...listeners]; if (allCurrentParticipants.some(p => !windows[p] || !personalities[p])) { console.warn("[WARN] A participant window or config disappeared mid-argument."); if (isArguing) endArgument("Argument stopped: A participant left or their config is missing."); return; } const speakerConfig = personalities[speakerPersonality]; const speakerWindow = windows[speakerPersonality]; const speakerMood = speakerWindow.mood || 'neutral'; console.log(`[INFO] Argument Turn ${argueTurns + 1}/${MAX_ARGUE_TURNS} - Speaker: ${speakerPersonality} (${speakerConfig.name}, Mood: ${speakerMood})`); const previousSpeakerIndex = (argueTurns - 1 + numParticipants) % numParticipants; const previousSpeakerPersonality = argumentParticipants[previousSpeakerIndex]; if (argueTurns > 0 && speakerWindow.isSpeaking && previousSpeakerPersonality && windows[previousSpeakerPersonality]) { console.log(`[DEBUG] Arg Step: Waiting for previous speaker (${previousSpeakerPersonality}) audio if playing...`); while (globalIsAudioPlaying && currentSpeaker === previousSpeakerPersonality && argumentParticipants.includes(previousSpeakerPersonality)) { await new Promise(resolve => setTimeout(resolve, 150)); if (!isArguing || argumentParticipants.some(p => !windows[p])) { console.warn("[WARN] Argument ended while waiting for previous audio."); if (isArguing) endArgument("Argument interrupted while waiting for audio."); return; } } console.log(`[DEBUG] Arg Step: Previous speaker audio finished or wasn't playing.`); } const thinkingMessages = []; thinkingMessages.push(appendMessage(speakerWindow.chatDisplay, 'System', 'Thinking...')); listeners.forEach(listenerId => { if (windows[listenerId]) { thinkingMessages.push(appendMessage(windows[listenerId].chatDisplay, 'System', `${speakerConfig.name} is thinking...`)); } }); try { const recentMessages = getRecentArgumentMessages(argumentParticipants, 10); const argumentHistoryText = recentMessages.length > 0 ? recentMessages.map(msg => `${msg.sender}: ${msg.text}`).join('\n') : "This is the first turn of the argument."; let lastSpeakerActualId = null; let lastSpeakerName = 'Nobody yet'; let lastSpeakerMessageText = 'Kick off the insults!'; let lastSpeakerWorstCrime = 'their general uselessness'; if (argueTurns > 0) { lastSpeakerActualId = argumentParticipants[previousSpeakerIndex]; if (lastSpeakerActualId && personalities[lastSpeakerActualId] && argumentParticipants.includes(lastSpeakerActualId)) { lastSpeakerName = personalities[lastSpeakerActualId].name; lastSpeakerWorstCrime = personalities[lastSpeakerActualId].worstCrime || 'their pitiful existence'; const lastMessageFromSpeaker = [...recentMessages].reverse().find(msg => msg.sender === lastSpeakerName); if (lastMessageFromSpeaker?.text.trim()) { lastMessageText = lastMessageFromSpeaker.text; } else { lastMessageText = `[${lastSpeakerName}'s last statement was incoherent or missing. Attack their crime: ${lastSpeakerWorstCrime}]`; console.warn(`[WARN] Arg Step: Could not find valid last message from ${lastSpeakerName}. Using fallback prompt info.`); } } else { lastMessageText = "[The previous speaker vanished mysteriously.]"; lastSpeakerName = "[A Ghost]"; console.warn(`[WARN] Arg Step: Previous speaker ID ${lastSpeakerActualId} seems invalid.`); } } let promptText = ""; const brevityInstructionArg = "**Keep response 2-4 sentences MAX.**"; const negativeConstraint = "\n**RULE: NEVER ask for context or clarification. If the last message is unclear, mock it or attack the speaker's character/crime. BE AGGRESSIVE and INSULTING.**\n"; const moodInstructionArg = `\n**CURRENT MOOD: You are feeling ${speakerMood}. Let this influence your response.**\n`; let multiSpeakerInstructionArg = ""; if (['west', 'moors', 'huntley'].includes(speakerPersonality)) { multiSpeakerInstructionArg = "\n**ALSO: If your persona involves multiple individuals (like West, Moors, Huntley/Carr), ONLY ONE individual should speak per turn, clearly identify them (e.g., 'Rose:', 'Brady:', 'Maxine:').**\n"; } const speakerCrime = speakerConfig.worstCrime || 'being pathetic'; const listenerNames = listeners.map(lId => personalities[lId]?.name || lId); const listenerCrimes = listeners.map(lId => personalities[lId]?.worstCrime || 'being boring'); let basePrompt = `CONTEXT: You ARE ${speakerConfig.name} (${speakerConfig.title}). Your worst crime: ${speakerCrime}. You are in a heated argument. Goal: DOMINATE and HUMILIATE your opponents.${moodInstructionArg}`; if (numParticipants > 1) { basePrompt += `OPPONENTS: ${listenerNames.join(', ')} (Crimes: ${listenerCrimes.join('; ')})\n`; } basePrompt += `RECENT HISTORY:\n${argumentHistoryText}\n`; if (argueTurns > 0) { basePrompt += `${lastSpeakerName} (Crime: ${lastSpeakerWorstCrime}) just said: "${lastMessageText}"\n`; } basePrompt += `TASK:\n`; if (numParticipants === 1) { promptText = basePrompt + `1. ARGUE with yourself (as ${speakerConfig.name}).\n2. Express internal conflict or contradictory thoughts.\n3. NO REPETITION.\n${negativeConstraint}OUTPUT: ${brevityInstructionArg} ONLY your internal argument response as ${speakerConfig.name}.`; } else if (numParticipants === 2) { promptText = basePrompt + basePrompt + `1. REACT VICIOUSLY to ${lastSpeakerName}'s last message.\n2. ASSERT DOMINANCE over ${lastSpeakerName}.\n3. NO REPETITION of previous points.\n${negativeConstraint}${multiSpeakerInstructionArg}OUTPUT: ${brevityInstructionArg} ONLY your response as ${speakerConfig.name}.`; } else if (numParticipants === 3) { const otherListenerId = listeners.find(lId => lId !== lastSpeakerActualId); const otherListenerName = otherListenerId ? (personalities[otherListenerId]?.name || otherListenerId) : "[Other Idiot]"; const otherListenerCrime = otherListenerId ? (personalities[otherListenerId]?.worstCrime || 'existing') : 'existing'; promptText = basePrompt + `1. REACT to ${lastSpeakerName}'s last message.\n2. ATTACK OTHERS (${otherListenerName}).\n3. EMBODY ${speakerConfig.name} with aggression.\n4. NO REPETITION of previous points.\n${negativeConstraint}${multiSpeakerInstructionArg}OUTPUT: ${brevityInstructionArg} ONLY your response, ensuring you target BOTH opponents.`; } else { const otherListeners = listeners.filter(lId => lId !== lastSpeakerActualId); const otherListenerName1 = otherListeners[0] ? (personalities[otherListeners[0]]?.name || "[Idiot 1]") : "[Idiot 1]"; const otherListenerCrime1 = otherListeners[0] ? (personalities[otherListeners[0]]?.worstCrime || 'being useless') : 'being useless'; const otherListenerName2 = otherListeners[1] ? (personalities[otherListeners[1]]?.name || "[Idiot 2]") : "[Idiot 2]"; const otherListenerCrime2 = otherListeners[1] ? (personalities[otherListeners[1]]?.worstCrime || 'wasting space') : 'wasting space'; promptText = basePrompt + `1. REACT to ${lastSpeakerName}'s last message.\n2. ATTACK OTHERS (${otherListenerName1} and ${otherListenerName2}).\n3. EMBODY ${speakerConfig.name} with extreme aggression.\n4. NO REPETITION of previous points.\n${negativeConstraint}${multiSpeakerInstructionArg}OUTPUT: ${brevityInstructionArg} ONLY your response, ensuring you target ALL THREE opponents.`; } console.log(`[DEBUG] Argument Prompt for ${speakerPersonality} (Turn ${argueTurns + 1}, Mood: ${speakerMood}): ${promptText}`); const response = await fetch(`${API_BASE_URL}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: promptText, personality: speakerPersonality, userId, mood: speakerMood, argumentContext: { isArguing: true, opponents: listeners.map(lId => personalities[lId]?.name || lId) } }) }); thinkingMessages.forEach(msg => { if (msg?.parentNode) msg.remove(); }); if (!response.ok) { const errorText = await response.text(); throw new Error(`Argument chat API request failed: ${response.status}. Details: ${errorText}`); } const data = await response.json(); if (!isArguing || argumentParticipants.some(p => !windows[p])) { console.warn("[WARN] Argument ended or participant left while waiting for API response."); if (isArguing) endArgument("Argument interrupted during AI response generation."); return; } const responseText = data.response || `[${speakerConfig.name} became speechless...]`; console.log(`[DEBUG API Response] Raw ARGUMENT response for ${speakerPersonality}: "${responseText}"`); appendMessage(speakerWindow.chatDisplay, speakerConfig.name, responseText); if (numParticipants > 1) { listeners.forEach(listenerId => { if (windows[listenerId]) { appendMessage(windows[listenerId].chatDisplay, speakerConfig.name, responseText, 'opponent-text'); } }); } if (speakerWindow.isSpeaking) { try { await playAudio(responseText, speakerPersonality); } catch (e) { console.warn(`[WARN] Argument audio playback failed for ${speakerPersonality}: ${e}`); } } else { await new Promise(resolve => setTimeout(resolve, 250 + Math.random() * 350)); } argueTurns++; if (argueTurns < MAX_ARGUE_TURNS && isArguing && argumentParticipants.every(p => windows[p])) { setTimeout(argumentStep, 250 + Math.random() * 350); } else { if (isArguing) { const reason = argueTurns >= MAX_ARGUE_TURNS ? `Argument reached max turns.` : `Argument ended unexpectedly.`; endArgument(reason); } } } catch (err) { console.error(`[ERROR] Argument step failed for speaker ${speakerPersonality}: ${err.message}`, err); thinkingMessages.forEach(msg => { if (msg?.parentNode) msg.remove(); }); argumentParticipants.forEach(pId => { if (windows[pId]) { const context = (pId === speakerPersonality) ? "" : ` involving ${speakerConfig?.name || speakerPersonality}`; appendMessage(windows[pId].chatDisplay, 'System', `Argument error${context}: ${err.message}`, 'error-text'); } }); if (isArguing) endArgument("Argument ended due to an error."); } }
+          function endArgument(reason = "Argument ended.") { if (!isArguing && selectedForArgument.length === 0) { console.log("[DEBUG] endArgument called but not arguing and nothing selected."); return; } const wasActuallyArguing = isArguing; const formerParticipants = [...argumentParticipants]; console.log(`[INFO] Ending argument. Reason: ${reason}`); isArguing = false; argumentParticipants = []; argueTurns = 0; selectedForArgument = []; if (globalIsAudioPlaying && formerParticipants.includes(currentSpeaker) && currentAudio) { console.log(`[DEBUG] Stopping argument audio for ${currentSpeaker} on endArgument.`); try { currentAudio.pause(); currentAudio.src = ''; } catch (e) { console.warn("[WARN] Error stopping audio on endArgument:", e); } globalIsAudioPlaying = false; isTTSPlaying = false; currentSpeaker = null; currentAudio = null; } Object.keys(windows).forEach(pId => { const windowData = windows[pId]; if (windowData) { if (windowData.argueBtn) { windowData.argueBtn.classList.remove('argue-active', 'argue-selected'); windowData.argueBtn.title = 'Select window for argument (Min 2, Max 4)'; } if (windowData.micBtn) { windowData.micBtn.disabled = !supportsSpeechRecognition; } if (wasActuallyArguing && formerParticipants.includes(pId)) { appendMessage(windowData.chatDisplay, 'System', reason); } resetInactivityTimer(pId); } }); console.log(`[INFO] Argument cleanup complete.`); }
+
+
+         // --- TOP TRUMPS GAME LOGIC ---
+          let topTrumpsDeck = {}; let userTopTrumpsHand = []; let aiTopTrumpsHand = []; let topTrumpCurrentCardUser = null; let topTrumpCurrentCardAI = null; let topTrumpSelectedCategory = null; let topTrumpsGameActive = false; let topTrumpsFirstPlayer = null; let topTrumpsUserWins = 0; let topTrumpsAIWins = 0;
+          // --- MODIFICATION: Added state for TT sound ---
+          let topTrumpsSoundEnabled = true;
+          // --- End MODIFICATION ---
+          const TOP_TRUMPS_CATEGORIES = ['victims', 'notoriety', 'cunning', 'evil', 'creepiness', 'fiddling']; const TOP_TRUMPS_DISPLAY_NAMES = { victims: "Victims", notoriety: "Notoriety", cunning: "Cunning", evil: "Evil", creepiness: "Creepiness", fiddling: "Fiddling", user: "You", ai: "AI" };
+          let winSynth, loseSynth, gameWinSynth;
+
+          function initializeSounds() {
+              try {
+                  // Only initialize if Tone is available and context is running
+                  if (typeof Tone !== 'undefined' && Tone.context.state === 'running') {
+                      winSynth = new Tone.Synth({
+                          oscillator: { type: 'sine' },
+                          envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+                      }).toDestination();
+                      loseSynth = new Tone.Synth({
+                          oscillator: { type: 'triangle' },
+                          envelope: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.1 }
+                      }).toDestination();
+                      gameWinSynth = new Tone.PolySynth(Tone.Synth, {
+                          oscillator: { type: 'pwm', modulationFrequency: 0.2 },
+                          envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 0.4 }
+                      }).toDestination();
+                      console.log("Tone.js synths initialized.");
+                  } else {
+                      console.warn("Tone.js context not running or Tone not loaded. Synths not initialized.");
+                      winSynth = loseSynth = gameWinSynth = null;
+                  }
+              } catch (err) {
+                  console.error("Failed to initialize Tone.js synths:", err);
+                  winSynth = loseSynth = gameWinSynth = null; // Disable sounds if error
+                  showFeedbackMessage(document.body, "Audio effects could not be initialized.", 4000);
+              }
+          }
+          // --- MODIFICATION: Check topTrumpsSoundEnabled before playing ---
+          function playWinSound() {
+              if (topTrumpsSoundEnabled && winSynth && typeof Tone !== 'undefined' && Tone.context.state === 'running') {
+                  winSynth.triggerAttackRelease('C5', '8n', Tone.now());
+                  console.log("Played win sound.");
+              } else { console.warn(`Win sound skipped (Enabled: ${topTrumpsSoundEnabled}, Synth: ${!!winSynth}, Context: ${typeof Tone !== 'undefined' ? Tone.context.state : 'N/A'}).`); }
+          }
+          function playLoseSound() {
+              if (topTrumpsSoundEnabled && loseSynth && typeof Tone !== 'undefined' && Tone.context.state === 'running') {
+                  loseSynth.triggerAttackRelease('C3', '4n', Tone.now());
+                  console.log("Played lose sound.");
+              } else { console.warn(`Lose sound skipped (Enabled: ${topTrumpsSoundEnabled}, Synth: ${!!loseSynth}, Context: ${typeof Tone !== 'undefined' ? Tone.context.state : 'N/A'}).`); }
+          }
+          function playGameWinTune() {
+              if (topTrumpsSoundEnabled && gameWinSynth && typeof Tone !== 'undefined' && Tone.context.state === 'running') {
+                  const now = Tone.now();
+                  gameWinSynth.triggerAttackRelease(['C4', 'E4', 'G4'], '8n', now);
+                  gameWinSynth.triggerAttackRelease(['E4', 'G4', 'C5'], '8n', now + 0.2);
+                  gameWinSynth.triggerAttackRelease(['G4', 'C5', 'E5'], '4n', now + 0.4);
+                  console.log("Played game win tune.");
+              } else { console.warn(`Game win tune skipped (Enabled: ${topTrumpsSoundEnabled}, Synth: ${!!gameWinSynth}, Context: ${typeof Tone !== 'undefined' ? Tone.context.state : 'N/A'}).`); }
+          }
+          // --- End MODIFICATION ---
+
+          function initializeTopTrumpsDeck() { topTrumpsDeck = {}; const personalityKeys = Object.keys(personalities); personalityKeys.forEach(key => { const pData = personalities[key]; if (pData && pData.stats) { topTrumpsDeck[key] = { name: pData.name, victims: pData.stats.victims || 0, notoriety: pData.stats.notoriety || 1, cunning: pData.stats.cunning || 1, evil: pData.stats.evil || 1, creepiness: pData.stats.creepiness || 1, fiddling: pData.stats.fiddling || 0 }; } else { console.warn(`Personality '${key}' missing stats. Creating card with default stats.`); topTrumpsDeck[key] = { name: pData?.name || key, victims: 0, notoriety: 1, cunning: 1, evil: 1, creepiness: 1, fiddling: 0 }; } }); console.log("Initialized Top Trumps Deck:", topTrumpsDeck); }
+          function dealTopTrumpsCards() { initializeTopTrumpsDeck(); const allCards = Object.keys(topTrumpsDeck); if (allCards.length < 2) { showFeedbackMessage(document.getElementById('top-trumps-game-area') || document.body, "Not enough cards to play!", 3000); return false; } shuffleArray(allCards); const halfDeck = Math.ceil(allCards.length / 2); userTopTrumpsHand = allCards.slice(0, halfDeck).map(key => ({ ...topTrumpsDeck[key], id: key })); aiTopTrumpsHand = allCards.slice(halfDeck).map(key => ({ ...topTrumpsDeck[key], id: key })); topTrumpCurrentCardUser = userTopTrumpsHand.shift(); topTrumpCurrentCardAI = aiTopTrumpsHand.shift(); console.log(`Dealt ${userTopTrumpsHand.length + 1} cards to user and ${aiTopTrumpsHand.length + 1} cards to AI.`); return true; }
+          function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+
+          // --- MODIFICATION: Added speaker icon toggle logic ---
+          function toggleTopTrumpsSound() {
+              topTrumpsSoundEnabled = !topTrumpsSoundEnabled;
+              const speakerIcon = document.getElementById('top-trumps-speaker-icon');
+              if (speakerIcon) {
+                  if (topTrumpsSoundEnabled) {
+                      speakerIcon.classList.remove('fa-volume-mute');
+                      speakerIcon.classList.add('fa-volume-up', 'active');
+                      speakerIcon.title = 'Toggle Sound Effects (On)';
+                  } else {
+                      speakerIcon.classList.remove('fa-volume-up', 'active');
+                      speakerIcon.classList.add('fa-volume-mute');
+                      speakerIcon.title = 'Toggle Sound Effects (Off)';
+                  }
+              }
+              console.log(`Top Trumps sound ${topTrumpsSoundEnabled ? 'enabled' : 'disabled'}.`);
+          }
+          // --- End MODIFICATION ---
+
+          function startTopTrumpsGame() {
+              // Ensure audio context is running before starting game sounds
+              if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                   Tone.start().then(() => {
+                       console.log("Audio context started by Tone.start() for Top Trumps.");
+                       initializeSounds(); // Initialize sounds now that context is running
+                       _startTopTrumpsGameInternal();
+                   }).catch(e => {
+                       console.error("Error starting Tone.js audio context for Top Trumps:", e);
+                       showFeedbackMessage(document.body, "Could not enable audio for game. Click the page to try again.", 5000);
+                        _startTopTrumpsGameInternal(); // Start game without sound if context fails
+                   });
+               } else if (typeof Tone !== 'undefined') {
+                    if(!winSynth) initializeSounds(); // Initialize if Tone is ready but sounds weren't
+                   _startTopTrumpsGameInternal();
+               } else {
+                   console.warn("Tone.js not loaded. Starting game without sound.");
+                    _startTopTrumpsGameInternal();
+               }
+          }
+
+          function _startTopTrumpsGameInternal() {
+             const gameArea = document.getElementById('top-trumps-game-area');
+             const gameHeader = document.getElementById('top-trumps-header');
+             const closeBtn = document.getElementById('top-trumps-close-btn');
+             const startBtn = document.getElementById('top-trumps-btn');
+             // --- MODIFICATION: Get speaker icon and add listener ---
+             const speakerIcon = document.getElementById('top-trumps-speaker-icon');
+             // --- End MODIFICATION ---
+
+             if (!gameArea || !gameHeader || !closeBtn || !startBtn || !speakerIcon) { console.error("Top Trumps game UI elements missing!"); showFeedbackMessage(document.body, "Error: Game UI missing.", 3000); return; }
+             if (topTrumpsGameActive) { bringToFront(gameArea); showFeedbackMessage(gameArea, 'A Top Trumps game is already active. Close it first to restart.', 3000); return; }
+             // Removed the lines that close other windows:
+             // console.log("Closing existing chat/info windows to start Top Trumps...");
+             // Object.keys(windows).forEach(pId => windows[pId]?.closeBtn?.click());
+             // Object.keys(infoWindows).forEach(pId => infoWindows[pId]?.windowDiv?.remove());
+             // windows = {}; infoWindows = {};
+             if (isArguing) endArgument("Argument ended to start Top Trumps.");
+             const dealSuccess = dealTopTrumpsCards();
+             if (!dealSuccess) return;
+             topTrumpsGameActive = true;
+             startBtn.disabled = true;
+             const buttonContainer = document.querySelector('.button-container');
+             let initialTop = 100;
+             if (buttonContainer) { initialTop = buttonContainer.getBoundingClientRect().bottom + 20; }
+             const gameAreaMaxWidth = parseInt(window.getComputedStyle(gameArea).maxWidth, 10) || 600;
+             const initialLeft = (document.body.clientWidth / 2) - (Math.min(gameAreaMaxWidth, document.body.clientWidth * 0.9) / 2);
+             gameArea.style.top = `${Math.max(10, initialTop)}px`;
+             gameArea.style.left = `${Math.max(10, initialLeft)}px`;
+             gameArea.style.display = 'flex';
+             bringToFront(gameArea);
+             makeDraggable(gameArea, gameHeader);
+             closeBtn.onclick = closeTopTrumpsGame;
+             // --- MODIFICATION: Add speaker icon listener ---
+             speakerIcon.onclick = toggleTopTrumpsSound;
+             // Ensure icon state matches variable on game start
+             if (topTrumpsSoundEnabled) {
+                 speakerIcon.classList.remove('fa-volume-mute');
+                 speakerIcon.classList.add('fa-volume-up', 'active');
+                 speakerIcon.title = 'Toggle Sound Effects (On)';
+             } else {
+                 speakerIcon.classList.remove('fa-volume-up', 'active');
+                 speakerIcon.classList.add('fa-volume-mute');
+                 speakerIcon.title = 'Toggle Sound Effects (Off)';
+             }
+             // --- End MODIFICATION ---
+             const bringTTToFrontHandler = (e) => { if (e.target === gameHeader || e.target.closest('.title-block')) { bringToFront(gameArea); } else if (!e.target.closest('.game-content-wrapper, i, button')) { bringToFront(gameArea); } };
+             gameArea.addEventListener('mousedown', bringTTToFrontHandler, true);
+             gameArea.addEventListener('touchstart', bringTTToFrontHandler, { passive: true, capture: true });
+             topTrumpsFirstPlayer = Math.random() < 0.5 ? 'user' : 'ai';
+             showFeedbackMessage(gameArea, `Top Trumps started! ${TOP_TRUMPS_DISPLAY_NAMES[topTrumpsFirstPlayer] || capitalizeFirstLetter(topTrumpsFirstPlayer)} goes first.`, 3000);
+             updateTopTrumpsUI();
+             if (topTrumpsFirstPlayer === 'ai') { setTimeout(aiTopTrumpsTurn, 1500); }
+          }
+
+          function closeTopTrumpsGame() { const gameArea = document.getElementById('top-trumps-game-area'); const startBtn = document.getElementById('top-trumps-btn'); if (gameArea) gameArea.style.display = 'none'; if (startBtn) startBtn.disabled = false; topTrumpsGameActive = false; userTopTrumpsHand = []; aiTopTrumpsHand = []; topTrumpCurrentCardUser = null; topTrumpCurrentCardAI = null; topTrumpSelectedCategory = null; topTrumpsFirstPlayer = null; const userCardArea = document.getElementById('user-card-area'); const aiCardArea = document.getElementById('ai-card-area'); const categoryButtonsArea = document.getElementById('category-buttons-area'); const gameInfoArea = document.getElementById('game-info-area'); const statusMsg = document.getElementById('game-status-message'); if (userCardArea) userCardArea.innerHTML = '(Card Name)'; if (aiCardArea) aiCardArea.innerHTML = 'AI Cards: (Count)'; if (categoryButtonsArea) categoryButtonsArea.innerHTML = ''; if (gameInfoArea) gameInfoArea.innerHTML = 'Info'; if (statusMsg) statusMsg.textContent = ''; console.log("Top Trumps game closed. Score from last game persists until new game starts."); }
+          function userPlaysTopTrumpCategory(category) { if (!topTrumpsGameActive || topTrumpsFirstPlayer !== 'user' || !topTrumpCurrentCardUser || !topTrumpCurrentCardAI || topTrumpSelectedCategory) { console.log(`User play ignored. Active: ${topTrumpsGameActive}, Turn: ${topTrumpsFirstPlayer}, UserCard: ${!!topTrumpCurrentCardUser}, AICard: ${!!topTrumpCurrentCardAI}, CategorySelected: ${!!topTrumpSelectedCategory}`); return; } if (!TOP_TRUMPS_CATEGORIES.includes(category)) { console.error(`Invalid category played: ${category}`); return; } console.log(`User played category: ${category}`); topTrumpSelectedCategory = category; updateTopTrumpsUI(); setTimeout(compareTopTrumpCards, 1000); }
+          function aiTopTrumpsTurn() { if (!topTrumpsGameActive || topTrumpsFirstPlayer !== 'ai' || !topTrumpCurrentCardAI || !topTrumpCurrentCardUser) { console.log(`AI turn ignored. Active: ${topTrumpsGameActive}, Turn: ${topTrumpsFirstPlayer}, UserCard: ${!!topTrumpCurrentCardUser}, AICard: ${!!topTrumpCurrentCardAI}`); return; } let bestCategory = TOP_TRUMPS_CATEGORIES[0]; let highestValue = -Infinity; TOP_TRUMPS_CATEGORIES.forEach(category => { if (topTrumpCurrentCardAI.hasOwnProperty(category) && topTrumpCurrentCardAI[category] > highestValue) { highestValue = topTrumpCurrentCardAI[category]; bestCategory = category; } }); topTrumpSelectedCategory = bestCategory; const displayName = TOP_TRUMPS_DISPLAY_NAMES[bestCategory] || capitalizeFirstLetter(bestCategory); console.log(`AI chose category: ${bestCategory} (${highestValue})`); const gameArea = document.getElementById('top-trumps-game-area'); if (gameArea) showFeedbackMessage(gameArea, `AI plays: ${displayName} (${highestValue})`, 2000); updateTopTrumpsUI(); setTimeout(compareTopTrumpCards, 1500); }
+
+          function compareTopTrumpCards() {
+              if (!topTrumpsGameActive || !topTrumpSelectedCategory || !topTrumpCurrentCardUser || !topTrumpCurrentCardAI) { console.warn("compareTopTrumpCards called without active game, selected category, or current cards."); return; }
+              if (!TOP_TRUMPS_CATEGORIES.includes(topTrumpSelectedCategory) || !topTrumpCurrentCardUser.hasOwnProperty(topTrumpSelectedCategory) || !topTrumpCurrentCardAI.hasOwnProperty(topTrumpSelectedCategory)) { console.error(`Error comparing category '${topTrumpSelectedCategory}'. Category missing on cards.`); topTrumpSelectedCategory = null; updateTopTrumpsUI(); if (topTrumpsFirstPlayer === 'ai') { setTimeout(aiTopTrumpsTurn, 1500); } else { const statusMsg = document.getElementById('game-status-message'); if (statusMsg) statusMsg.textContent = "Error. Choose again."; } return; }
+
+              const userValue = topTrumpCurrentCardUser[topTrumpSelectedCategory];
+              const aiValue = topTrumpCurrentCardAI[topTrumpSelectedCategory];
+              const statusMsg = document.getElementById('game-status-message');
+              const categoryDisplayName = TOP_TRUMPS_DISPLAY_NAMES[topTrumpSelectedCategory] || capitalizeFirstLetter(topTrumpSelectedCategory);
+              let roundWinner = null;
+              let message = `Comparing ${categoryDisplayName}: You (${userValue}) vs AI (${aiValue}). `;
+              let isDraw = false;
+
+              if (userValue > aiValue) {
+                  roundWinner = 'user';
+                  message += 'You win the round!';
+                  const wonCards = [topTrumpCurrentCardUser, topTrumpCurrentCardAI].sort(() => Math.random() - 0.5);
+                  userTopTrumpsHand.push(...wonCards);
+                  playWinSound(); // Play win sound
+              } else if (aiValue > userValue) {
+                  roundWinner = 'ai';
+                  message += 'AI wins the round!';
+                  const wonCards = [topTrumpCurrentCardAI, topTrumpCurrentCardUser].sort(() => Math.random() - 0.5);
+                  aiTopTrumpsHand.push(...wonCards);
+                  playLoseSound(); // Play lose sound
+              } else {
+                  isDraw = true;
+                  roundWinner = topTrumpsFirstPlayer; // Same player goes again on draw
+                  message += 'It\'s a draw! Cards returned to bottom. Same player goes again.';
+                  userTopTrumpsHand.push(topTrumpCurrentCardUser);
+                  aiTopTrumpsHand.push(topTrumpCurrentCardAI);
+                  // No sound for a draw
+              }
+
+              if(statusMsg) {
+                  statusMsg.textContent = message;
+                  if (!isDraw) { // Only pulse on win/loss, not draw
+                      statusMsg.classList.add('pulse-win-message');
+                      setTimeout(() => { statusMsg.classList.remove('pulse-win-message'); }, 700);
+                  }
+              }
+              console.log(message);
+
+              // Get next cards AFTER determining winner and playing sound
+              topTrumpCurrentCardUser = userTopTrumpsHand.shift();
+              topTrumpCurrentCardAI = aiTopTrumpsHand.shift();
+
+              if (checkTopTrumpsGameOver()) { // Check game over AFTER getting new cards
+                  updateTopTrumpsUI(); // Update UI one last time for game over state
+                  return; // Stop further processing
+              }
+
+              // If game not over, reset category and set next player
+              topTrumpSelectedCategory = null;
+              topTrumpsFirstPlayer = roundWinner; // Winner of the round goes next
+
+              // Delay before updating UI and potentially starting AI turn
+              setTimeout(() => {
+                  updateTopTrumpsUI();
+                  if (topTrumpsGameActive && topTrumpsFirstPlayer === 'ai') {
+                      setTimeout(aiTopTrumpsTurn, 1500);
+                  }
+              }, 2000); // Delay after showing round result
+          }
+
+          function checkTopTrumpsGameOver() {
+              const gameArea = document.getElementById('top-trumps-game-area');
+              let gameOverMessage = "";
+              let winner = null;
+
+              // Check win conditions AFTER potentially shifting cards in compareTopTrumpCards
+              if (!topTrumpCurrentCardUser && userTopTrumpsHand.length === 0) {
+                  gameOverMessage = 'Game Over! AI wins!';
+                  winner = 'ai';
+                  topTrumpsGameActive = false;
+              } else if (!topTrumpCurrentCardAI && aiTopTrumpsHand.length === 0) {
+                  gameOverMessage = 'Game Over! You win!';
+                  winner = 'user';
+                  topTrumpsGameActive = false;
+              }
+
+              if (!topTrumpsGameActive && winner) { // If game just ended
+                  console.log(gameOverMessage);
+                  if (winner === 'user') {
+                      topTrumpsUserWins++;
+                      playGameWinTune(); // Play game win tune for player
+                  } else if (winner === 'ai') {
+                      topTrumpsAIWins++;
+                      // Optionally play a different sound for AI win
+                  }
+                  console.log(`Game ended. Score updated: You ${topTrumpsUserWins} - AI ${topTrumpsAIWins}`);
+
+                  if (gameArea) {
+                      showFeedbackMessage(gameArea, gameOverMessage, 5000);
+                      const statusMsg = document.getElementById('game-status-message');
+                      if(statusMsg) statusMsg.textContent = gameOverMessage;
+                      const startBtn = document.getElementById('top-trumps-btn');
+                      if (startBtn) startBtn.disabled = false; // Re-enable start button
+                      const categoryButtonsArea = document.getElementById('category-buttons-area');
+                      if(categoryButtonsArea) categoryButtonsArea.innerHTML = ''; // Clear buttons
+                  }
+              }
+              return !topTrumpsGameActive; // Return true if game is over
+          }
+
+          function updateTopTrumpsUI() {
+              const gameArea = document.getElementById('top-trumps-game-area');
+              const userCardArea = document.getElementById('user-card-area');
+              const aiCardArea = document.getElementById('ai-card-area');
+              const categoryButtonsArea = document.getElementById('category-buttons-area');
+              const gameInfoArea = document.getElementById('game-info-area');
+              const statusMsg = document.getElementById('game-status-message');
+              const scoreArea = document.getElementById('top-trumps-score-area');
+
+              if (!gameArea || !userCardArea || !aiCardArea || !categoryButtonsArea || !gameInfoArea || !scoreArea) {
+                  console.error("One or more Top Trumps UI elements are missing!");
+                  return;
+              }
+
+              // Update score display with colored spans
+              scoreArea.innerHTML = `Score: You <span class="player-score">${topTrumpsUserWins}</span> - AI <span class="ai-score">${topTrumpsAIWins}</span>`;
+
+              // Display User Card
+              if (topTrumpCurrentCardUser) {
+                  let userCardHTML = `<strong style="color: #93c5fd;">${topTrumpCurrentCardUser.name}</strong><ul>`;
+                  TOP_TRUMPS_CATEGORIES.forEach(catId => {
+                      if (topTrumpCurrentCardUser.hasOwnProperty(catId)) {
+                          const dName = TOP_TRUMPS_DISPLAY_NAMES[catId] || capitalizeFirstLetter(catId);
+                          // Highlight selected category if it's user's turn and category is selected
+                          const isHighlighted = topTrumpsFirstPlayer === 'user' && catId === topTrumpSelectedCategory;
+                          const hlStyle = isHighlighted ? 'color: #67e8f9; font-weight: bold;' : '';
+                          userCardHTML += `<li style="${hlStyle}">${dName}: ${topTrumpCurrentCardUser[catId]}</li>`;
+                      }
+                  });
+                  userCardHTML += `</ul>`;
+                  userCardArea.innerHTML = userCardHTML;
+              } else {
+                  userCardArea.innerHTML = `<strong style="color: #cbd5e1;">${userTopTrumpsHand.length > 0 ? '(Error - No current card?)' : 'None'}</strong>`;
+              }
+
+              // Display AI Card (or card count)
+              let aiCardsInHand = aiTopTrumpsHand.length;
+              let currentAICardExists = !!topTrumpCurrentCardAI;
+              let totalAICards = aiCardsInHand + (currentAICardExists ? 1 : 0);
+
+              // Show AI card details only AFTER a category has been selected
+              if (currentAICardExists && topTrumpSelectedCategory) {
+                  let aiCardHTML = `<strong style="color: #fda4af;">${topTrumpCurrentCardAI.name}</strong><ul>`;
+                  TOP_TRUMPS_CATEGORIES.forEach(catId => {
+                      if (topTrumpCurrentCardAI.hasOwnProperty(catId)) {
+                          const dName = TOP_TRUMPS_DISPLAY_NAMES[catId] || capitalizeFirstLetter(catId);
+                          // Highlight the selected category on the AI card as well
+                          const hlStyle = catId === topTrumpSelectedCategory ? 'color: #fca5a5; font-weight: bold;' : '';
+                          aiCardHTML += `<li style="${hlStyle}">${dName}: ${topTrumpCurrentCardAI[catId]}</li>`;
+                      }
+                  });
+                  aiCardHTML += `</ul>`;
+                  aiCardArea.innerHTML = aiCardHTML;
+              } else { // Otherwise, just show the count
+                  aiCardArea.innerHTML = `<strong style="color: #cbd5e1;">AI Cards: ${totalAICards}</strong>`;
+                  if (totalAICards === 0) {
+                      aiCardArea.innerHTML = '<strong style="color: #cbd5e1;">None</strong>';
+                  }
+              }
+
+              // Update Game Info Area (Card Counts and Turn Indicator)
+              let userCardsInHand = userTopTrumpsHand.length;
+              let currentUserCardExists = !!topTrumpCurrentCardUser;
+              let totalUserCards = userCardsInHand + (currentUserCardExists ? 1 : 0);
+              const turnDisplayName = TOP_TRUMPS_DISPLAY_NAMES[topTrumpsFirstPlayer] || capitalizeFirstLetter(topTrumpsFirstPlayer || '');
+              const userCardCountHTML = `<span style="color: #93c5fd; font-weight: bold;">Your Cards: ${totalUserCards}</span>`;
+              const aiCardCountHTML = `<span style="color: #fda4af; font-weight: bold;">AI Cards: ${totalAICards}</span>`;
+              const turnIndicatorHTML = topTrumpsFirstPlayer && topTrumpsGameActive ? `Turn: ${turnDisplayName}` : '';
+              gameInfoArea.innerHTML = `${userCardCountHTML}<br>${aiCardCountHTML}<br>${turnIndicatorHTML}`;
+
+              // Update Category Buttons
+              categoryButtonsArea.innerHTML = ''; // Clear existing buttons
+              if (topTrumpsGameActive && topTrumpsFirstPlayer === 'user' && !topTrumpSelectedCategory && topTrumpCurrentCardUser) {
+                  // Only show "Your turn" message if not comparing results
+                  if (statusMsg && !statusMsg.textContent.startsWith("Comparing")) {
+                      statusMsg.textContent = "Your turn! Choose a category.";
+                  }
+                  // Generate buttons for the user to click
+                  TOP_TRUMPS_CATEGORIES.forEach(catId => {
+                      if (topTrumpCurrentCardUser.hasOwnProperty(catId)) {
+                          const dName = TOP_TRUMPS_DISPLAY_NAMES[catId] || capitalizeFirstLetter(catId);
+                          const button = document.createElement('button');
+                          button.textContent = `${dName} (${topTrumpCurrentCardUser[catId]})`;
+                          button.onclick = () => userPlaysTopTrumpCategory(catId);
+                          categoryButtonsArea.appendChild(button);
+                      }
+                  });
+              } else if (topTrumpsGameActive && topTrumpsFirstPlayer === 'ai' && !topTrumpSelectedCategory) {
+                  // Show "AI is choosing" message if not comparing results
+                   if (statusMsg && !statusMsg.textContent.startsWith("Comparing")) {
+                      statusMsg.textContent = "AI is choosing...";
+                  }
+              } else if (!topTrumpsGameActive) {
+                  // Clear buttons if game is over
+                  categoryButtonsArea.innerHTML = '';
+              }
+              // If a category *is* selected, buttons are cleared, and comparison happens.
+          }
+
+          function capitalizeFirstLetter(string) { if (!string) return ''; return string.charAt(0).toUpperCase() + string.slice(1); }
+
+
+         // --- Initialize Page ---
+         function initializeButtons() { const buttonContainer = document.querySelector('.button-container'); if (!buttonContainer) { console.error('Error: .button-container not found.'); return; } const buttons = buttonContainer.querySelectorAll('button'); buttons.forEach(button => { const buttonId = button.id; if (buttonId && buttonId.endsWith('-btn') && buttonId !== 'top-trumps-btn') { const personalityId = buttonId.replace('-btn', ''); if (personalities[personalityId]) { button.textContent = personalities[personalityId].title; if (!button.dataset.listenerAttached) { button.addEventListener('click', () => createChatWindow(personalityId)); button.dataset.listenerAttached = 'true'; } } else { button.disabled = true; button.style.opacity = '0.5'; button.title = `Config missing for ${personalityId}`; console.warn(`Button found for '${personalityId}', but no config exists.`); } } }); let existingTTBtn = document.getElementById('top-trumps-btn'); if (!existingTTBtn) { const topTrumpsButton = document.createElement('button'); topTrumpsButton.id = 'top-trumps-btn'; topTrumpsButton.textContent = 'TOP TRUMPS'; topTrumpsButton.onclick = startTopTrumpsGame; buttonContainer.appendChild(topTrumpsButton); console.log("Top Trumps button added."); } else { existingTTBtn.onclick = startTopTrumpsGame; } console.log("[DEBUG] Personality and Top Trumps buttons initialized."); }
+         function setInitialBackground() { const defaultBackground = 'hunt.jpg'; document.body.style.backgroundImage = `url('${IMAGE_BASE_URL}/${defaultBackground}')`; console.log(`[DEBUG] Initial background set to: ${defaultBackground}`); }
+
+         function initializeAudioContext() {
+            const startAudio = async () => {
+                if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                    try {
+                        await Tone.start();
+                        console.log('Audio context started successfully via user interaction.');
+                        initializeSounds(); // Initialize sounds now that context is running
+                    } catch (e) {
+                        console.error('Error starting audio context on user interaction:', e);
+                        showFeedbackMessage(document.body, "Could not enable audio. Interaction might be needed.", 5000);
+                    }
+                } else if (typeof Tone !== 'undefined' && !winSynth) {
+                    // If context is running but sounds aren't initialized (e.g., page reload after interaction)
+                    initializeSounds();
+                }
+                // Remove the listener after the first interaction
+                document.body.removeEventListener('click', startAudio);
+                document.body.removeEventListener('touchstart', startAudio); // Also remove touch listener
+            };
+            // Add listeners for the first click or touch - these will be removed after the first interaction
+            // The intro screen click handler will call this function after dismissing the intro.
+            // We don't need to add these listeners here anymore, as the intro click handles it.
+            // document.body.addEventListener('click', startAudio, { once: true });
+            // document.body.addEventListener('touchstart', startAudio, { once: true });
+         }
+
+
+// --- Command Window Logic ---
+
+// Flag to control command access
+let isAuthenticatedForCommands = false;
+
+// Function to log commands/output to the command window
+function logCommand(message) {
+    const cmdOutput = document.getElementById('command-output');
+    if (cmdOutput) {
+        const line = document.createElement('div');
+        line.textContent = message;
+        cmdOutput.appendChild(line);
+        // Auto-scroll to the bottom
+        cmdOutput.scrollTop = cmdOutput.scrollHeight;
+    }
+}
+
+let settings = {
+    farts: true,
+    voice: true, // This setting controls TTS globally, but individual windows have their own toggle
+    temp: 0.7,
+    top_p: 1.0,
+    max_tokens: 150, // default response length
+    speed: 1.0 // Default voice speed (1.0 is normal)
+};
+
+const commandActions = {
+    'nzen': () => {
+         // Authenticate the user for commands
+         isAuthenticatedForCommands = true;
+         logCommand('🔐 Full access unlocked.');
+    },
+    'farts:on': () => {
+        settings.farts = true;
+        Object.values(windows).forEach(winData => {
+            winData.isFartModeEnabled = true;
+            if (winData.fartToggleIcon) winData.fartToggleIcon.classList.add('active');
+            if (winData.fartToggleIcon) winData.fartToggleIcon.title = 'Toggle Fart Sounds (On)';
+        });
+        logCommand('💨 Fart mode enabled globally and for open windows.');
+    },
+
+'resetmood:': (command) => {
+    const parts = command.split(':');
+    const personalityId = parts[1]?.trim().toLowerCase();
+    const targetMood = parts[2]?.trim().toLowerCase();
+
+    if (!personalityId) {
+        logCommand(`⚠️ Usage: resetmood:[personalityId]:[mood]`);
+        return;
+    }
+
+    // Create the window if it's not already open
+    if (!windows[personalityId]) {
+        createChatWindow(personalityId);
+    }
+
+    const validMoods = ['neutral', 'curious', 'happy', 'defensive', 'paranoid', 'agitated', 'calm'];
+
+    if (targetMood && validMoods.includes(targetMood)) {
+        windows[personalityId].mood = targetMood;
+        windows[personalityId].forcedMood = targetMood;
+
+        logCommand(`😌 Mood for "${personalityId}" set to "${targetMood}" (🔒 locked).`);
+    } else {
+        const randomMood = validMoods[Math.floor(Math.random() * validMoods.length)];
+        windows[personalityId].mood = randomMood;
+        windows[personalityId].forcedMood = randomMood;
+
+        logCommand(`🎲 Mood for "${personalityId}" randomly set to "${randomMood}" (🔒 locked).`);
+    }
+
+    // Optional voice confirmation
+    playAudio(`I am now feeling ${windows[personalityId].mood}`, personalityId);
+},
+
+
+
+    'voice:on': () => {
+        settings.voice = true;
+        logCommand('🔊 Global voice setting enabled.');
+    },
+    'voice:off': () => {
+        settings.voice = false;
+        logCommand('🔇 Global voice setting disabled.');
+    },
+    'settings': () => logCommand(`Settings:\nFarts: ${settings.farts ? 'On' : 'Off'}\nVoice: ${settings.voice ? 'On' : 'Off'}\nTemp: ${settings.temp}\nTop P: ${settings.top_p}\nMax Tokens: ${settings.max_tokens}\nSpeed: ${settings.speed}`),
+    'clear': () => {
+        const cmdOutput = document.getElementById('command-output');
+        if (cmdOutput) cmdOutput.innerHTML = '';
+        logCommand('✅ Console cleared.');
+        addPromptLine(); // Assumes addPromptLine function exists elsewhere in your full code
+    },
+    'help': () => logHelpWindow(), // Assumes logHelpWindow function exists elsewhere in your full code
+    'open:': (command) => {
+        const personalityId = command.split(':')[1]?.trim().toLowerCase();
+        if (personalityId && personalities[personalityId]) { // Assumes personalities object is global
+            logCommand(`🧠 Opening personality window for "${personalities[personalityId].title}"...`);
+            createChatWindow(personalityId); // Assumes createChatWindow function is global
+        } else if (personalityId) {
+            logCommand(`⚠️ Unknown personality: "${personalityId}".`);
+        }
+        else {
+            logCommand('⚠️ Specify a personality name (e.g., "open:huntley").');
+        }
+    },
+    'temp:': (command) => {
+        const val = parseFloat(command.split(':')[1]);
+        if (!isNaN(val) && val >= 0 && val <= 2.5) {
+            settings.temp = val;
+            logCommand(`🌡 Temperature set to ${val}`);
+        } else {
+            logCommand('⚠️ Invalid temperature value. Use 0–2.5');
+        }
+    },
+    'topp:': (command) => {
+        const val = parseFloat(command.split(':')[1]);
+        if (!isNaN(val) && val >= 0 && val <= 1) {
+            settings.top_p = val;
+            logCommand(`🧮 Top P set to ${val}`);
+        } else {
+            logCommand('⚠️ Invalid top_p value. Use 0–1');
+        }
+    },
+    'maxtokens:': (command) => {
+        const val = parseInt(command.split(':')[1]);
+        if (!isNaN(val) && val >= 50 && val <= 4000) {
+            settings.max_tokens = val;
+            logCommand(`🧾 Max tokens set to ${val}`);
+        } else {
+            logCommand('⚠️ Invalid max_tokens value. Use 50–4000');
+        }
+    },
+
+
+
+
+
+'getmood:': (command) => {
+    const personalityId = command.split(':')[1]?.trim().toLowerCase();
+    if (!personalityId || !windows[personalityId]) {
+        logCommand(`⚠️ No window open for "${personalityId}".`);
+        return;
+    }
+
+    const mood = windows[personalityId].mood || 'unknown';
+    logCommand(`🧠 Mood for ${personalityId} is currently "${mood}".`);
+},
+
+    'speed:': (command) => {
+        const val = parseFloat(command.split(':')[1]);
+        if (!isNaN(val) && val > 0) {
+            settings.speed = val;
+            logCommand(`⏩ Voice speed set to ${val}`);
+        } else {
+            logCommand('⚠️ Invalid speed value. Use a number greater than 0.');
+        }
+    },
+
+'listwindow': () => {
+    const openIds = Object.keys(windows);
+    if (openIds.length === 0) {
+        logCommand('🪟 No chat windows are currently open.');
+    } else {
+        logCommand(`🪟 Open windows (${openIds.length}):`);
+        openIds.forEach(id => {
+            const name = personalities[id]?.name || 'Unknown';
+            logCommand(`🔹 ${name} — use ID: ${id}`);
+        });
+    }
+},
+
+    'ask:': (command) => {
+        const prompt = command.split(':').slice(1).join(':').trim();
+        if (prompt) {
+            generateResponse(prompt); // Assumes generateResponse function is global
+        } else {
+            logCommand('⚠️ No prompt provided.');
+        }
+    },
+    'say:': (command) => {
+         const prompt = command.split(':').slice(1).join(':').trim();
+         if (prompt) {
+             generateResponse(prompt); // Assumes generateResponse function is global
+         } else {
+             logCommand('⚠️ No prompt provided.');
+         }
+     },
+    // --- START: MODIFIED ROLLCALL COMMAND (Enable Voice, Open, Respond, Close) ---
+    'rollcall': async () => {
+        if (!isAuthenticatedForCommands) {
+            logCommand('🔒 Command locked. Type "nzen" to unlock.');
+            return;
+        }
+        logCommand("📢 Initiating Roll Call (Open, Respond, Close)...");
+        const personalityIds = Object.keys(personalities); // Assumes personalities object is globally available
+        const delayForResponseVisible = 500; // MODIFIED: Reduced from 3000ms to 500ms
+        const delayBetweenPersonalities = 500;  // 0.2 seconds before next personality starts
+
+        for (const pId of personalityIds) {
+            if (personalities[pId]) {
+                const personalityName = personalities[pId].name || pId;
+                logCommand(`Processing ${personalityName}...`);
+
+                // 1. Open or ensure window is open
+                let windowExisted = !!windows[pId]; // Check if window already exists (assumes 'windows' object is global)
+                if (!windowExisted) {
+                    createChatWindow(pId); // Assumes createChatWindow is globally available
+
+
+
+
+                    // Brief pause for window creation and to be registered in 'windows' object
+                    await new Promise(resolve => setTimeout(resolve, 250));
+                }
+
+                const windowData = windows[pId]; // Assumes windows object is globally available
+
+
+                    if (command === '') {
+                                 currentCommandInput = '';
+                                 addPromptLine();
+                                 return;
+                             }
+
+
+                if (windowData && windowData.chatDisplay) {
+                    // 2. Temporarily enable voice for this window
+                    windowData.isSpeaking = true;
+                    if (windowData.speakerIcon) { // Ensure speakerIcon element exists on windowData
+                        windowData.speakerIcon.className = 'fas fa-volume-up speaker-icon active'; // Visually set to 'on'
+                        windowData.speakerIcon.title = 'Speak Responses (Auto-enabled for Rollcall)';
+                    } else {
+                        console.warn(`Speaker icon not found for ${personalityName} during rollcall.`);
+                    }
+
+                    // 3. Respond (Text and Audio)
+                    const rollcallMessage = `Yes Sir, ${personalityName} present.`;
+
+                    // Append text message
+                    // Assumes appendMessage, saveChatHistory are globally available
+                    appendMessage(windowData.chatDisplay, personalityName, rollcallMessage);
+                    windowData.history.push({ sender: personalityName, message: rollcallMessage });
+                    saveChatHistory(pId, windowData.history);
+
+                    // Attempt to play audio
+                    // playAudio (assumed global) will use the now-enabled windowData.isSpeaking
+                    try {
+                        await playAudio(rollcallMessage, pId); // Assumes playAudio is globally available
+                        logCommand(`🔊 ${personalityName} responded.`);
+                    } catch (audioError) {
+                        logCommand(`⚠️ Audio error for ${personalityName}: ${audioError.message}`);
+                        console.error(`Rollcall audio error for ${personalityName}:`, audioError);
+                    }
+
+                    // 4. Wait for response to be visible/heard (shortened delay)
+                    await new Promise(resolve => setTimeout(resolve, delayForResponseVisible));
+
+                    // 5. Close the window
+                    // The closeBtn.click() handles removing the window from DOM and from 'windows' object.
+                    if (windows[pId] && windows[pId].closeBtn) {
+                        windows[pId].closeBtn.click(); // This should trigger all cleanup defined in your closeBtn handler
+                        logCommand(`✖️ Window for ${personalityName} closed.`);
+                         // Brief pause for window closing animation/cleanup
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } else {
+                        logCommand(`⚠️ Window for ${personalityName} could not be closed (already closed or no close button).`);
+                    }
+                } else {
+                    logCommand(`⚠️ Could not create or find chat window for ${pId}. Skipping.`);
+                }
+                // 6. Delay before next personality
+                await new Promise(resolve => setTimeout(resolve, delayBetweenPersonalities));
+            }
+        }
+        logCommand("📢 Roll Call (Open, Respond, Close) Complete.");
+    }
+    // --- END: MODIFIED ROLLCALL COMMAND ---
+};
+
+
+         function logHelpWindow() {
+             const helpText = [
+                 '🆘 Command Reference:',
+                 '──────────────────────────',
+                 '🔐 nzen — unlock full access', // Updated help text
+                 '🧠 open:[name] — open a personality window',
+		 '🧾 listwindow: - lists open window IDs',
+                 '💨 farts:on/off — toggle global fart mode',
+		 '📢 Rollcall — Global Rollcall',
+		 '🤖 getmood: generate a response (uses settings)',
+                 '🔊 voice:on/off — toggle global global voice setting',
+                 '🌡 temp:[0–2.5] — set API temperature',
+		 '🌡 resetmood:[neutral, curios, happy, defensive, paranoid] — set mood',
+                 '🧮 topp:[0–1] — set API top_p value',
+                 '🧾 maxtokens:[50–4000] — set API response length',
+                 '⏩ speed:[>0] — set voice speed',
+                 '🤖 ask:[text] / say:[text] — generate a response (uses settings)',
+                 '⚙️ settings — show current values',
+                 '♻️ clear — clear console output',
+                 '──────────────────────────'
+             ];
+             helpText.forEach(line => logCommand(line));
+         }
+
+         // Example function using current settings to make an API call
+         // This function is called by the 'ask:' and 'say:' commands
+         async function generateResponse(promptText) {
+             console.log(`[DEBUG generateResponse] Function called with promptText: "${promptText}"`); // Add this log
+
+             // Use the correct authentication flag for command terminal functionality
+             if (!isAuthenticatedForCommands) {
+                 logCommand('🔒 Commands are locked. Type "nzen" to unlock.');
+                 console.log('[DEBUG generateResponse] Authentication failed.'); // Add this log
+                 return;
+             }
+
+             logCommand('🤖 Sending request using current settings...');
+             console.log('[DEBUG generateResponse] Authentication successful. Preparing fetch.'); // Add this log
+
+
+             try {
+                 console.log(`[DEBUG generateResponse] Fetch body: ${JSON.stringify({
+                     prompt: promptText, // Using the 'promptText' variable here
+                     temperature: settings.temp,
+                     top_p: settings.top_p,
+                     max_tokens: settings.max_tokens,
+                     isFartModeEnabled: settings.farts,
+                     speed: settings.speed
+                 })}`); // Log the body being sent
+
+                 // Replace 'https://your-api.com/generate' with your actual API endpoint
+                 // Note: This endpoint is different from the chat endpoint used by windows.
+                 // Ensure this endpoint exists and handles the parameters correctly.
+                 const res = await fetch('https://your-api.com/generate', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                         prompt: promptText, // It uses 'promptText' here
+                         temperature: settings.temp,
+                         top_p: settings.top_p,
+                         max_tokens: settings.max_tokens,
+                         // Include global fart setting and speed if your API supports it here
+                         isFartModeEnabled: settings.farts,
+                         speed: settings.speed // Pass the speed setting
+                     })
+                 });
+
+                 console.log(`[DEBUG generateResponse] Fetch response received. Status: ${res.status}`); // Log after fetch
+
+                 if (!res.ok) {
+                      console.log(`[DEBUG generateResponse] Fetch response not OK.`); // Log non-OK status
+                     const errorData = await res.json().catch(() => ({})); // Try parsing error body
+                     console.error(`[ERROR generateResponse] API Error: ${res.status} ${res.statusText} - ${errorData.message || 'Unknown error'}`); // More detailed error log
+                     logCommand(`❌ API Error: ${res.status} ${res.statusText} - ${errorData.message || 'Unknown error'}`);
+                     return;
+                 }
+
+                 const data = await res.json();
+                 console.log(`[DEBUG generateResponse] Received data:`, data); // Log received data
+
+                 logCommand(`🧠 Response: ${data.response || 'No response returned'}`);
+
+                 // Add voice output if enabled globally (and supported by this placeholder)
+                 if (settings.voice && data.response) {
+                     // Placeholder for voice synthesis for the command response
+                     console.log("Command response voice output placeholder:", data.response);
+                     // You would add code here to use a Web Speech API or similar,
+                     // potentially using settings.speed for the rate.
+                 }
+
+             } catch (err) {
+                 logCommand(`❌ Error while fetching response: ${err.message}`);
+                 console.error("API Fetch Error:", err);
+                 console.log('[DEBUG generateResponse] Fetch failed in catch block.'); // Add this log
+             }
+         }
+
+         // --- End Command Window Logic ---
+
+
+         document.addEventListener('DOMContentLoaded', () => {
+             console.log('[DEBUG] DOMContentLoaded event fired.');
+
+             // --- Intro Screen Logic ---
+             const introScreen = document.getElementById('intro-screen');
+             const mainContent = document.getElementById('main-content');
+
+             if (introScreen && mainContent) {
+                 // Initially hide the main content
+                 mainContent.style.display = 'none';
+
+                 // Set the background image for the intro screen using the base URL
+                 introScreen.style.backgroundImage = `url('${IMAGE_BASE_URL}/Intro.jpg')`;
+                 console.log(`[DEBUG] Intro screen background set to: ${IMAGE_BASE_URL}/Intro.jpg`);
+
+
+                 // Add click listener to the intro screen
+                 introScreen.addEventListener('click', () => {
+                     console.log('[DEBUG] Intro screen clicked. Dismissing intro.');
+                     // Hide the intro screen
+                     introScreen.style.opacity = '0'; // Start fade out
+                     setTimeout(() => {
+                         introScreen.style.display = 'none'; // Hide completely after fade
+                         // Show the main content
+                         mainContent.style.display = 'block';
+                         // Add a class to the body to manage visibility if needed by other CSS
+                         document.body.classList.add('show-main-content');
+
+                         // Initialize the rest of the page now that the intro is gone
+                         initializeButtons();
+                         setInitialBackground();
+                         initializeAudioContext(); // Initialize audio context after user interaction
+
+                         if (!supportsSpeechRecognition) {
+                             showFeedbackMessage(document.body, 'Voice input not supported.', 6000);
+                         }
+                         const gameArea = document.getElementById('top-trumps-game-area');
+                         if (gameArea) gameArea.style.display = 'none'; // Ensure game is hidden initially
+
+                         // Initialize command window after main content is shown
+                         initializeCommandWindow();
+
+                         console.log('[DEBUG] Main content revealed and page initialization complete.');
+
+                     }, 500); // Match the CSS transition duration
+                 });
+
+                 console.log('[DEBUG] Intro screen listener added. Main content initially hidden.');
+
+             } else {
+                 console.error("Intro screen or main content elements not found!");
+                 // If elements are missing, just initialize the page normally
+                 initializeButtons();
+                 setInitialBackground();
+                 initializeAudioContext();
+                 if (!supportsSpeechRecognition) {
+                     showFeedbackMessage(document.body, 'Voice input not supported.', 6000);
+                 }
+                 const gameArea = document.getElementById('top-trumps-game-area');
+                 if (gameArea) gameArea.style.display = 'none';
+                 initializeCommandWindow(); // Initialize command window even without intro
+                 console.log('[DEBUG] Intro elements missing. Page initialized without intro screen.');
+             }
+             // --- End Intro Screen Logic ---
+
+
+             // --- Command Window DOM and Event Listeners (Terminal Style) - Moved to a function ---
+             function initializeCommandWindow() {
+                 const cmdWin = document.getElementById('command-window');
+                 const cmdOutput = document.getElementById('command-output');
+                 const terminalToggleArea = document.getElementById('terminal-toggle-area');
+
+                 let currentCommandInput = '';
+                 const promptPrefix = ': ';
+
+                 function updateInputLine() {
+                     if (!cmdOutput) return;
+                     const lastChild = cmdOutput.lastChild;
+                     if (lastChild && lastChild.classList.contains('input-line')) {
+                         cmdOutput.removeChild(lastChild);
+                     }
+                     const inputLine = document.createElement('div');
+                     inputLine.classList.add('input-line');
+                     inputLine.textContent = promptPrefix + currentCommandInput;
+                     cmdOutput.appendChild(inputLine);
+                     cmdOutput.scrollTop = cmdOutput.scrollHeight;
+                 }
+
+                 function addPromptLine() {
+                     if (!cmdOutput) return;
+                     const promptLine = document.createElement('div');
+                     promptLine.textContent = promptPrefix;
+                     cmdOutput.appendChild(promptLine);
+                     cmdOutput.scrollTop = cmdOutput.scrollHeight;
+                 }
+
+                 if (cmdOutput) {
+                     logCommand('🔒');
+                     addPromptLine();
+                 } else {
+                     console.error("Command output element #command-output not found!");
+                 }
+
+                 if (terminalToggleArea && cmdWin && cmdOutput) {
+                     terminalToggleArea.addEventListener('click', () => {
+                         const isHidden = cmdWin.style.display === 'none' || cmdWin.style.display === '';
+                         cmdWin.style.display = isHidden ? 'flex' : 'none';
+                         if (isHidden) {
+                             cmdWin.focus();
+                             cmdOutput.scrollTop = cmdOutput.scrollHeight;
+                             if (!cmdOutput.lastChild || !cmdOutput.lastChild.textContent.startsWith(promptPrefix)) {
+                                 addPromptLine();
+                             }
+                             updateInputLine();
+                         }
+                     });
+                 } else {
+                     console.error("Command window or toggle elements not found!");
+                 }
+
+                 if (cmdWin && cmdOutput) {
+                     cmdWin.addEventListener('keydown', (event) => {
+                         if (!event.ctrlKey && !event.metaKey) {
+                             if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Delete'].includes(event.key)) {
+                                  event.preventDefault();
+                             }
+                         }
+
+                         if (event.key === 'Enter') {
+                             event.preventDefault();
+                             const command = currentCommandInput.trim();
+                             const lastChild = cmdOutput.lastChild;
+                             if (lastChild && lastChild.classList.contains('input-line')) {
+                                 cmdOutput.removeChild(lastChild);
+                             }
+                             logCommand(promptPrefix + command);
+
+                             if (command === '') {
+                                 currentCommandInput = '';
+                                 addPromptLine();
+                                 return;
+                             }
+
+                             if (!isAuthenticatedForCommands && command.toLowerCase() !== 'nzen') {
+                                 logCommand('🔒');
+                                 currentCommandInput = '';
+                                 addPromptLine();
+                                 return;
+                             }
+
+                             let commandProcessed = false;
+                             for (const cmd in commandActions) {
+                                if (command === cmd || (cmd.endsWith(':') && command.startsWith(cmd))) {
+                                    commandActions[cmd](command);
+                                    commandProcessed = true;
+                                    break;
+                                }
+                             }
+
+                             if (!commandProcessed) {
+                                 logCommand(`❌ Unknown command: "${command}"`);
+                                 logCommand('Type "help" for a list of commands.');
+                             }
+
+                             currentCommandInput = '';
+                             addPromptLine();
+
+                         } else if (event.key === 'Backspace') {
+                             if (currentCommandInput.length > 0) {
+                                 currentCommandInput = currentCommandInput.slice(0, -1);
+                                 updateInputLine();
+                             }
+                         } else if (event.key.length === 1) {
+                             currentCommandInput += event.key;
+                             updateInputLine();
+                         }
+                     });
+
+                     cmdWin.addEventListener('click', () => {
+                         cmdWin.focus();
+                     });
+
+                     makeDraggable(cmdWin, cmdWin);
+                 } else {
+                     console.error("Command window or output elements not found for terminal logic!");
+                 }
+
+                 // Ensure command window is hidden initially
+                 if (cmdWin) cmdWin.style.display = 'none';
+             }
+             // --- End Command Window DOM and Event Listeners ---
+
+
+         }); // End of DOMContentLoaded
+
+         // The initializeAudioContext function is now called by the intro screen click handler.
+         // We don't need the window.onload listener for Tone.start() anymore.
+         // window.addEventListener('DOMContentLoaded', () => {
+         //   const commandWin = document.getElementById('command-window');
+         //   if (commandWin) commandWin.style.display = 'none'; // Ensure it's hidden
+         // });
+     </script>
+
+ 
+<!-- Quick Voice Test Buttons -->
+<div class="button-container" style="margin-top: 1rem;">
+  <button onclick="playAudio('Hello from Stalker', 'stalker')">Stalker</button>
+  <button onclick="playAudio('Hello from Andrew', 'andrew')">Andrew</button>
+  <button onclick="playAudio('Hello from Josef', 'josef')">Josef</button>
+  <button onclick="playAudio('Hello from Letby', 'letby')">Letby</button>
+  <button onclick="playAudio('Hello from Shannon', 'shannon')">Shannon</button>
+  <button onclick="playAudio('Hello from Jimmy', 'jimmy')">Jimmy</button>
+  <button onclick="playAudio('Hello from Hunts', 'hunts')">Hunts</button>
+  <button onclick="playAudio('Hello from Ted', 'ted')">Ted</button>
+</div>
+
+</body>
+ </html>
