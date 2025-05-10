@@ -42,15 +42,12 @@
         body: JSON.stringify({ text, voice })
       });
 
-      const data = await res.json();
-      if (data && data.audioUrl) {
-        status.innerText = "✅ Success!";
-        player.src = data.audioUrl;
-        player.style.display = "block";
-        player.play();
-      } else {
-        status.innerText = "❌ Failed to generate audio.";
-      }
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      status.innerText = "✅ Stream ready!";
+      player.src = audioUrl;
+      player.style.display = "block";
+      player.play();
     }
   </script>
 </body>
