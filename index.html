@@ -4,29 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Play.ht TTS</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #121212;
-      color: white;
-      padding: 2rem;
-    }
-    #status {
-      margin-top: 1rem;
-    }
-    .success {
-      color: lightgreen;
-    }
-    .error {
-      color: red;
-    }
-  </style>
 </head>
-<body>
+<body style="font-family: sans-serif; padding: 2rem; background: #121212; color: white;">
   <h2>🎤 Type to Speak with Play.ht</h2>
   <textarea id="text" rows="5" cols="50" placeholder="Type something..." style="width: 100%;"></textarea>
   <br><br>
-  <label for="voice">Select Voice:</label><br>
+  <label for="voice">Select Voice:</label>
   <select id="voice">
     <option value="s3://voice-cloning-zero-shot/--ZmP68iZ-Gd_LxyVx2C9/stalker/manifest.json">Stalker</option>
     <option value="s3://voice-cloning-zero-shot/-mclt8urjjQX6KSOD-SpN/york/manifest.json">Ripper</option>
@@ -50,35 +33,21 @@
       const status = document.getElementById("status");
       const player = document.getElementById("player");
 
-      status.innerText = "🎙️ Sending...";
-      status.className = '';
+      status.innerText = "Sending...";
       player.style.display = "none";
 
-      try {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, voice, speed: parseFloat(document.getElementById('speed').value), sample_rate: parseInt(document.getElementById('sampleRate').value) })
-        });
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice })
+      });
 
-        if (!res.ok) {
-          const error = await res.json();
-          status.innerText = "❌ Error: " + (error.details || error.error);
-          status.className = 'error';
-          return;
-        }
-
-        const blob = await res.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        player.src = audioUrl;
-        player.style.display = "block";
-        player.play();
-        status.innerText = "✅ Voice stream ready!";
-        status.className = 'success';
-      } catch (err) {
-        status.innerText = "❌ Failed: " + err.message;
-        status.className = 'error';
-      }
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      status.innerText = "✅ Stream ready!";
+      player.src = audioUrl;
+      player.style.display = "block";
+      player.play();
     }
   </script>
 </body>
