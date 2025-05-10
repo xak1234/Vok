@@ -32,6 +32,13 @@ app.post('/api/tts', async (req, res) => {
       })
     });
 
+    const contentType = response.headers.get("content-type");
+    if (!contentType.includes("audio/mpeg")) {
+      const errorText = await response.text();
+      console.error("PlayHT error:", errorText);
+      return res.status(500).json({ error: "Invalid audio response", details: errorText });
+    }
+
     res.setHeader('Content-Type', 'audio/mpeg');
     response.body.pipe(res);
   } catch (err) {
