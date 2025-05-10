@@ -14,30 +14,28 @@ app.post('/api/tts', async (req, res) => {
   const { text, voice } = req.body;
 
   try {
-    const response = await fetch('https://api.play.ht/api/v2/tts', {
+    const response = await fetch('https://api.play.ht/api/v2/tts/stream', {
       method: 'POST',
       headers: {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        'Authorization': `Bearer ${PLAYHT_API_KEY}`,
-        'X-User-ID': PLAYHT_USER_ID
+        'X-USER-ID': PLAYHT_USER_ID,
+        'AUTHORIZATION': `Bearer ${PLAYHT_API_KEY}`,
+        'accept': 'audio/mpeg',
+        'content-type': 'application/json'
       },
       body: JSON.stringify({
         text,
         voice,
         output_format: 'mp3',
-        voice_engine: 'PlayHT2.0'
+        speed: 1,
+        sample_rate: 48000,
+        voice_engine: 'Play3.0'
       })
     });
 
-    const result = await response.json();
-    if (result && result.audioUrl) {
-      res.json({ audioUrl: result.audioUrl });
-    } else {
-      res.status(500).json({ error: 'TTS failed', raw: result });
-    }
+    res.setHeader('Content-Type', 'audio/mpeg');
+    response.body.pipe(res);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'TTS Stream failed', details: err.message });
   }
 });
 
