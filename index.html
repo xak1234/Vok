@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +15,7 @@
     <option value="s3://voice-cloning-zero-shot/-mclt8urjjQX6KSOD-SpN/york/manifest.json">Ripper</option>
     <option value="s3://voice-cloning-zero-shot/5eTQqEIfsDVfC_xuYSJ2d/josef/manifest.json">Josef</option>
     <option value="s3://voice-cloning-zero-shot/PhpYXU98ksvRQpKiwX-fz/letby/manifest.json">Letby</option>
-    <option value="s3://voice-cloning-zero-shot/YQnLcpzWwgNVvzeW_gQ4T/shannon/manifest.json">Shannon</option>
+    <option value="s3://voice-cloning-zero-shot/looTf0NVHGP5N33Xt3bMJ/shannon/manifest.json">Shannon</option>
     <option value="s3://voice-cloning-zero-shot/mxG-JSMwfhNaVWVLqawsg/jimy/manifest.json">Jimmy</option>
     <option value="s3://voice-cloning-zero-shot/xBdn4KI3fopPTXqnrBGkk/hunts/manifest.json">Hunt</option>
     <option value="s3://voice-cloning-zero-shot/xReT7HapjXaa2xCkLCRbb/andrew/manifest.json">Prince</option>
@@ -36,16 +37,11 @@
       status.innerText = "Sending...";
       player.style.display = "none";
 
-      const res = await fetch('/api/voice', { // <-- changed from /api/tts
+      const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, personality: voice }) // personality matches backend key
+        body: JSON.stringify({ text, voice })
       });
-
-      if (!res.ok) {
-        status.innerText = "❌ Error fetching voice.";
-        return;
-      }
 
       const blob = await res.blob();
       const audioUrl = URL.createObjectURL(blob);
