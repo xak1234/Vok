@@ -13,6 +13,10 @@ const PLAYHT_API_KEY = process.env.PLAYHT_API_KEY;
 app.post('/api/tts', async (req, res) => {
   const { text, voice } = req.body;
 
+  if (!text || !voice) {
+    return res.status(400).json({ error: 'Missing text or voice in request' });
+  }
+
   try {
     const response = await fetch('https://api.play.ht/api/v2/tts/stream', {
       method: 'POST',
@@ -27,24 +31,25 @@ app.post('/api/tts', async (req, res) => {
         voice,
         output_format: 'mp3',
         speed: 1,
-        sample_rate: 48000,
-        voice_engine: 'Play3.0'
+        sample_rate: 24000,
+        voice_engine: 'PlayHT2.0'
       })
     });
 
-    const contentType = response.headers.get("content-type");
-    if (!contentType.includes("audio/mpeg")) {
+    const contentType = response.headers.get('content-type');
+    if (!response.ok || !contentType || !contentType.includes('audio/mpeg')) {
       const errorText = await response.text();
-      console.error("PlayHT error:", errorText);
-      return res.status(500).json({ error: "Invalid audio response", details: errorText });
+      console.error('PlayHT Error:', errorText);
+      return res.status(500).json({ error: 'PlayHT failed', details: errorText });
     }
 
     res.setHeader('Content-Type', 'audio/mpeg');
     response.body.pipe(res);
   } catch (err) {
-    res.status(500).json({ error: 'TTS Stream failed', details: err.message });
+    console.error('Streaming Error:', err.message);
+    res.status(500).json({ error: 'Streaming failed', details: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🎧 TTS server running on ${PORT}`));
+app.listen(PORT, () => console.log(`🔊 Vok TTS server running on ${PORT}`));
