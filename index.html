@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,11 +36,16 @@
       status.innerText = "Sending...";
       player.style.display = "none";
 
-      const res = await fetch('/api/tts', {
+      const res = await fetch('/api/voice', { // <-- changed from /api/tts
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice })
+        body: JSON.stringify({ text, personality: voice }) // personality matches backend key
       });
+
+      if (!res.ok) {
+        status.innerText = "❌ Error fetching voice.";
+        return;
+      }
 
       const blob = await res.blob();
       const audioUrl = URL.createObjectURL(blob);
