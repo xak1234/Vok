@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play.ht TTS</title>
+</head>
+<body style="font-family: sans-serif; padding: 2rem; background: #121212; color: white;">
+  <h2>🎤 Type to Speak with Play.ht</h2>
+  <textarea id="text" rows="5" cols="50" placeholder="Type something..." style="width: 100%;"></textarea>
+  <br><br>
+  <label for="voice">Select Voice:</label>
+  <select id="voice">
+    <option value="s3://voice-cloning-zero-shot/--ZmP68iZ-Gd_LxyVx2C9/stalker/manifest.json">Stalker</option>
+    <option value="s3://voice-cloning-zero-shot/-mclt8urjjQX6KSOD-SpN/york/manifest.json">Ripper</option>
+    <option value="s3://voice-cloning-zero-shot/5eTQqEIfsDVfC_xuYSJ2d/josef/manifest.json">Josef</option>
+    <option value="s3://voice-cloning-zero-shot/PhpYXU98ksvRQpKiwX-fz/letby/manifest.json">Letby</option>
+    <option value="s3://voice-cloning-zero-shot/looTf0NVHGP5N33Xt3bMJ/shannon/manifest.json">Shannon</option>
+    <option value="s3://voice-cloning-zero-shot/mxG-JSMwfhNaVWVLqawsg/jimy/manifest.json">Jimmy</option>
+    <option value="s3://voice-cloning-zero-shot/xBdn4KI3fopPTXqnrBGkk/hunts/manifest.json">Hunt</option>
+    <option value="s3://voice-cloning-zero-shot/xReT7HapjXaa2xCkLCRbb/andrew/manifest.json">Prince</option>
+    <option value="s3://voice-cloning-zero-shot/xhzY33B1Yz3B-ZtcNnUOJ/ted/manifest.json">Ted</option>
+    <option value="s3://voice-cloning-zero-shot/I__jFv47f6cgYfXyosYm_/zod/manifest.json">Zodiac</option>
+    <option value="s3://voice-cloning-zero-shot/0c4c229f-7f99-4ed9-b904-223c701672b9/phoebesaad/manifest.json">phoebesaad</option>
+  </select>
+  <br><br>
+  <button onclick="sendToTTS()">🔊 Speak</button>
+  falling: none;
+  <button onclick="startRandomMix()" id="randomMixBtn">🎶 Random Mix (2 min)</button>
+  <p id="status"></p>
+  <audio id="player" controls style="margin-top: 2rem; display: none;"></audio>
+
+  <script>
+    // List of random words for generating text in Random Mix
+    const randomWords = [
+      "galaxy", "whisper", "shadow", "dream", "horizon", "mystery", "echo", "spark",
+      "journey", "cosmos", "twilight", "breeze", "phantom", "radiance", "quest", "void"
+    ];
+
+    // Generate random text (2-5 words)
+    function generateRandomText() {
+      const wordCount = Math.floor(Math.random() * 4) + 2; // 2 to 5 words
+      return Array.from(
+        { length: wordCount },
+        () => randomWords[Math.floor(Math.random() * randomWords.length)]
+      ).join(" ");
+    }
+
+    // Get random voice from dropdown
+    function getRandomVoice() {
+      const voiceSelect = document.getElementById("voice");
+      const options = voiceSelect.options;
+      return options[Math.floor(Math.random() * options.length)].value;
+    }
+
+    // Send TTS request to the Render backend
+    async function sendTTSRequest(text, voice) {
+      const status = document.getElementById("status");
+      const player = document.getElementById("player");
+
+      try {
+        status.innerText = `Sending: "${text}" with voice ${voice.split('/').pop()}`;
+        console.log(`Sending TTS request: text="${text}", voice="${voice}"`);
+
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voice })
+        });
+
+        if (!res.ok) {
+          throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+        }
+
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        status.innerText = "✅ Stream ready!";
+        player.src = audioUrl;
+        player.style.display = "block";
+        player.play();
+        return true;
+      } catch (error) {
+        status.innerText = `❌ Error: ${error.message}`;
+        console.error("TTS Error:", error);
+        return false;
+      }
+    }
+
+    // Handle "Speak" button click
+    async function sendToTTS() {
+      const text = document.getElementById("text").value.trim();
+      const voice = document.getElementById("voice").value;
+      const status = document.getElementById("status");
+
+      if (!text) {
+        status.innerText = "⚠️ Please enter some text.";
+        return;
+      }
+
+      await sendTTSRequest(text, voice);
+    }
+
+    // Handle "Random Mix" button click (2 minutes of random voices and text)
+    async function startRandomMix() {
+      const status = document.getElementById("status");
+      const randomMixBtn = document.getElementById("randomMixBtn");
+      const duration = 2 * 60 * 1000; // 2 minutes in milliseconds
+      const interval = 5000; // 5 seconds between requests
+      const startTime = Date.now();
+
+      randomMixBtn.disabled = true;
+      status.innerText = "Starting Random Mix...";
+
+      while (Date.now() - startTime < duration) {
+        const text = generateRandomText();
+        const voice = getRandomVoice();
+        const success = await sendTTSRequest(text, voice);
+        if (!success) {
+          status.innerText = "⚠️ Random Mix stopped due to error.";
+          break;
+        }
+        // Wait for the audio to finish or a fixed interval
+        await new Promise(resolve => setTimeout(resolve, interval));
+      }
+
+      status.innerText = "✅ Random Mix complete!";
+      randomMixBtn.disabled = false;
+    }
+  </script>
+</body>
+</html>
